@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audio Segment Tool</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Syne:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --sand: #d6ac80;
+      --crimson: #940000;
+      --espresso: #5a4230;
+      --ink: #040400;
+      --sand-light: #f0dfc4;
+      --sand-xlight: #faf4ec;
+      --crimson-dark: #6b0000;
+      --espresso-light: #8a6347;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: #f2ece3;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .shell {
+      background: var(--sand-xlight);
+      border-radius: 24px;
+      padding: 2.5rem 2.5rem 2rem;
+      width: 100%;
+      max-width: 600px;
+      border: 1.5px solid var(--sand);
+    }
+
+    .header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 2rem; }
+    .header-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: var(--espresso); letter-spacing: -0.3px; }
+    .header-badge { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px; color: var(--crimson); background: #f9e5e5; padding: 3px 9px; border-radius: 20px; border: 1px solid #f0c0c0; }
+
+    .drop-zone { background: #fff; border: 2px dashed var(--sand); border-radius: 16px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden; }
+    .drop-zone:hover, .drop-zone.drag-over { border-color: var(--crimson); background: #fff8f5; }
+    .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .drop-icon { width: 52px; height: 52px; background: var(--sand-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
+    .drop-icon svg { width: 26px; height: 26px; stroke: var(--espresso); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .drop-title { font-size: 15px; font-weight: 600; color: var(--espresso); margin-bottom: 5px; }
+    .drop-sub { font-size: 12px; color: var(--espresso-light); }
+    .drop-sub span { color: var(--crimson); font-weight: 500; }
+
+    .file-info { display: none; align-items: center; gap: 12px; background: var(--sand-light); border-radius: 10px; padding: 10px 14px; margin-top: 12px; }
+    .file-info.show { display: flex; }
+    .file-info-icon { width: 34px; height: 34px; background: var(--espresso); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .file-info-icon svg { width: 18px; height: 18px; stroke: var(--sand-light); fill: none; stroke-width: 1.8; stroke-linecap: round; }
+    .file-name { font-size: 13px; font-weight: 500; color: var(--espresso); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-size { font-size: 11px; color: var(--espresso-light); white-space: nowrap; }
+
+    .waveform-row { margin: 1.2rem 0 0; display: none; }
+    .waveform-row.show { display: block; }
+    .waveform-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--espresso-light); margin-bottom: 8px; }
+    .waveform { height: 40px; display: flex; align-items: center; gap: 3px; }
+    .waveform-bar { flex: 1; background: var(--sand); border-radius: 2px; animation: wave 1.2s ease-in-out infinite; }
+    @keyframes wave { 0%, 100% { opacity: 0.4; transform: scaleY(0.5); } 50% { opacity: 1; transform: scaleY(1); } }
+
+    .divider { height: 1px; background: var(--sand); opacity: 0.4; margin: 1.5rem 0; }
+
+    .minutes-row { display: flex; align-items: center; gap: 10px; margin-bottom: 1.2rem; }
+    .minutes-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--espresso-light); white-space: nowrap; }
+    .minutes-input { width: 70px; padding: 7px 10px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 500; color: var(--espresso); background: #fff; border: 1.5px solid var(--sand); border-radius: 8px; outline: none; transition: border-color 0.15s; }
+    .minutes-input:focus { border-color: var(--crimson); }
+    .minutes-unit { font-size: 12px; color: var(--espresso-light); }
+    .seg-bar { flex: 1; height: 6px; background: var(--sand-light); border-radius: 3px; overflow: hidden; }
+    .seg-fill { height: 100%; background: linear-gradient(90deg, var(--espresso), var(--crimson)); border-radius: 3px; width: 0%; transition: width 0.4s ease; }
+
+    .btn-row { display: flex; gap: 10px; }
+    .btn { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 10px; padding: 10px 20px; transition: all 0.15s ease; border: none; display: flex; align-items: center; gap: 7px; }
+    .btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .btn-primary { background: var(--crimson); color: #fff; flex: 1; justify-content: center; }
+    .btn-primary:hover { background: var(--crimson-dark); transform: translateY(-1px); }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn-secondary { background: var(--sand-light); color: var(--espresso); border: 1.5px solid var(--sand); }
+    .btn-secondary:hover { background: var(--sand); color: #fff; }
+    .btn-secondary:active { transform: scale(0.97); }
+    .btn-ghost { background: transparent; color: var(--espresso-light); border: 1.5px solid var(--sand); width: 100%; justify-content: center; margin-top: 10px; font-size: 12px; }
+    .btn-ghost:hover { color: var(--espresso); border-color: var(--espresso); }
+
+    .status-bar { display: none; align-items: center; gap: 8px; background: #fff8f5; border: 1px solid #f0c0c0; border-radius: 8px; padding: 8px 12px; margin-top: 10px; font-size: 12px; color: var(--crimson); font-weight: 500; }
+    .status-bar.show { display: flex; }
+    .status-bar.success { background: #f0faf5; border-color: #9fd4b8; color: #2a6b4a; }
+    .status-bar.error { background: #fff0f0; border-color: #f0b0b0; color: #8b0000; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    /* Segments list */
+    .segments-list { display: none; margin-top: 12px; }
+    .segments-list.show { display: block; }
+    .segments-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--espresso-light); margin-bottom: 8px; }
+    .segment-item { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid var(--sand); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; font-size: 12px; color: var(--espresso); }
+    .segment-item .seg-range { color: var(--espresso-light); }
+    .segment-dl { font-size: 11px; color: var(--crimson); font-weight: 600; cursor: pointer; text-decoration: underline; }
+    .segment-dl:hover { color: var(--crimson-dark); }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="header">
+      <span class="header-title">Audio Segment</span>
+      <span class="header-badge">Tool</span>
+    </div>
+
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept="audio/*" aria-label="Upload audio file" />
+      <div class="drop-icon">
+        <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      </div>
+      <p class="drop-title" id="dropTitle">Drop audio here</p>
+      <p class="drop-sub">or <span>browse your files</span> — mp3, wav, m4a, flac</p>
+    </div>
+
+    <div class="file-info" id="fileInfo">
+      <div class="file-info-icon">
+        <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      </div>
+      <div style="flex:1;overflow:hidden;">
+        <p class="file-name" id="fileName">—</p>
+        <p class="file-size" id="fileSize">—</p>
+      </div>
+    </div>
+
+    <div class="waveform-row" id="waveformRow">
+      <p class="waveform-label">Waveform preview</p>
+      <div class="waveform" id="waveform"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="minutes-row">
+      <span class="minutes-label">Segment every</span>
+      <input type="number" class="minutes-input" id="minutesInput" value="5" min="1" max="60" aria-label="Minutes per segment" />
+      <span class="minutes-unit">min</span>
+      <div class="seg-bar"><div class="seg-fill" id="segFill"></div></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="downloadBtn">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download All
+      </button>
+      <button class="btn btn-primary" id="processBtn">
+        <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Process Audio
+      </button>
+    </div>
+
+    <div class="status-bar" id="statusBar">
+      <div class="status-dot"></div>
+      <span id="statusText">Processing…</span>
+    </div>
+
+    <!-- Segment results list -->
+    <div class="segments-list" id="segmentsList">
+      <p class="segments-label">Segments</p>
+      <div id="segmentsContainer"></div>
+    </div>
+
+    <button class="btn btn-ghost" id="refreshBtn">
+      <svg style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24">
+        <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+      Refresh &amp; upload new
+    </button>
+  </div>
+<script>
+  // ─── APP STATE ────────────────────────────────────────────────────────
+  const state = { file: null, segments: [] };
+
+  // ─── DOM REFS ─────────────────────────────────────────────────────────
+  const dropZone          = document.getElementById('dropZone');
+  const fileInput         = document.getElementById('fileInput');
+  const fileInfo          = document.getElementById('fileInfo');
+  const fileName          = document.getElementById('fileName');
+  const fileSize          = document.getElementById('fileSize');
+  const waveformRow       = document.getElementById('waveformRow');
+  const waveform          = document.getElementById('waveform');
+  const minutesInput      = document.getElementById('minutesInput');
+  const segFill           = document.getElementById('segFill');
+  const processBtn        = document.getElementById('processBtn');
+  const downloadBtn       = document.getElementById('downloadBtn');
+  const refreshBtn        = document.getElementById('refreshBtn');
+  const statusBar         = document.getElementById('statusBar');
+  const statusText        = document.getElementById('statusText');
+  const dropTitle         = document.getElementById('dropTitle');
+  const segmentsList      = document.getElementById('segmentsList');
+  const segmentsContainer = document.getElementById('segmentsContainer');
+
+  // ─── UI HELPERS ───────────────────────────────────────────────────────
+  function formatBytes(bytes) {
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+  function formatSec(sec) {
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+  function showStatus(msg, type = 'loading') {
+    statusBar.className = 'status-bar show' + (type !== 'loading' ? ` ${type}` : '');
+    statusText.textContent = msg;
+  }
+  function hideStatus() { statusBar.classList.remove('show'); }
+
+  function setProcessBtn(s) {
+    const icons = {
+      idle:    `<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Process Audio`,
+      loading: `<svg viewBox="0 0 24 24" style="animation:spin 1s linear infinite;display:inline-block"><path d="M21 12a9 9 0 1 1-6.2-8.56" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Processing…`,
+      done:    `<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Done`,
+    };
+    processBtn.innerHTML = icons[s] || icons.idle;
+    processBtn.disabled = s === 'loading';
+  }
+
+  function buildWaveform() {
+    waveform.innerHTML = '';
+    for (let i = 0; i < 48; i++) {
+      const b = document.createElement('div');
+      b.className = 'waveform-bar';
+      b.style.cssText = `height:${10 + Math.random() * 30}px;animation-delay:${(i * 0.025).toFixed(3)}s`;
+      waveform.appendChild(b);
+    }
+  }
+
+  function updateSegBar() {
+    const val = Math.min(Math.max(parseInt(minutesInput.value) || 1, 1), 60);
+    segFill.style.width = Math.round((val / 60) * 100) + '%';
+  }
+
+  // ─── FILE HANDLING ────────────────────────────────────────────────────
+  function handleFile(file) {
+    if (!file || !file.type.startsWith('audio/')) {
+      showStatus('Please upload a valid audio file.', 'error');
+      return;
+    }
+    state.file = file;
+    state.segments = [];
+    fileName.textContent = file.name;
+    fileSize.textContent = formatBytes(file.size);
+    fileInfo.classList.add('show');
+    buildWaveform();
+    waveformRow.classList.add('show');
+    dropTitle.textContent = 'File loaded';
+    segmentsList.classList.remove('show');
+    segmentsContainer.innerHTML = '';
+    hideStatus();
+    setProcessBtn('idle');
+    downloadBtn.disabled = true;
+  }
+
+  fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f) { fileInput.files = e.dataTransfer.files; handleFile(f); }
+  });
+
+  minutesInput.addEventListener('input', updateSegBar);
+  updateSegBar();
+
+  // ─── IN-BROWSER SPLITTING ─────────────────────────────────────────────
+  processBtn.addEventListener('click', async () => {
+    if (!state.file) { showStatus('Please upload an audio file first.', 'error'); return; }
+
+    setProcessBtn('loading');
+    showStatus('Decoding audio…');
+    state.segments = [];
+
+    try {
+      const arrayBuffer = await state.file.arrayBuffer();
+      const audioCtx    = new (window.AudioContext || window.webkitAudioContext)();
+      const decoded     = await audioCtx.decodeAudioData(arrayBuffer);
+
+      const segSecs      = (parseInt(minutesInput.value) || 5) * 60;
+      const sr           = decoded.sampleRate;
+      const totalSamples = decoded.length;
+      const numCh        = decoded.numberOfChannels;
+      const numSegs      = Math.ceil(totalSamples / (segSecs * sr));
+
+      showStatus(`Splitting into ${numSegs} segment${numSegs !== 1 ? 's' : ''}…`);
+
+      for (let i = 0; i < numSegs; i++) {
+        const start = i * segSecs * sr;
+        const end   = Math.min(start + segSecs * sr, totalSamples);
+        const len   = end - start;
+        const buf   = audioCtx.createBuffer(numCh, len, sr);
+        for (let ch = 0; ch < numCh; ch++) {
+          buf.copyToChannel(decoded.getChannelData(ch).slice(start, end), ch);
+        }
+        const wav   = bufferToWav(buf);
+        const blob  = new Blob([wav], { type: 'audio/wav' });
+        const url   = URL.createObjectURL(blob);
+        const label = `segment_${String(i).padStart(3, '0')}.wav`;
+        state.segments.push({
+          id:          label,
+          label:       `Segment ${i + 1}`,
+          startSec:    i * segSecs,
+          endSec:      Math.min((i + 1) * segSecs, totalSamples / sr),
+          downloadUrl: url,
+          filename:    label,
+        });
+      }
+
+      setProcessBtn('done');
+      showStatus(`${state.segments.length} segment${state.segments.length !== 1 ? 's' : ''} ready`, 'success');
+      renderSegments(state.segments);
+      downloadBtn.disabled = false;
+
+    } catch (err) {
+      setProcessBtn('idle');
+      showStatus('Error: ' + err.message, 'error');
+    }
+  });
+
+  // ─── RENDER SEGMENT LIST ──────────────────────────────────────────────
+  function renderSegments(segments) {
+    segmentsContainer.innerHTML = '';
+    segments.forEach(seg => {
+      const div = document.createElement('div');
+      div.className = 'segment-item';
+      div.innerHTML = `
+        <span>${seg.label}</span>
+        <span class="seg-range">${formatSec(seg.startSec)} – ${formatSec(seg.endSec)}</span>
+        <a class="segment-dl" href="${seg.downloadUrl}" download="${seg.filename}">Download</a>`;
+      segmentsContainer.appendChild(div);
+    });
+    segmentsList.classList.add('show');
+  }
+
+  // ─── DOWNLOAD ALL ─────────────────────────────────────────────────────
+  downloadBtn.addEventListener('click', () => {
+    if (!state.segments.length) { showStatus('Process audio first.', 'error'); return; }
+    state.segments.forEach((seg, i) => {
+      setTimeout(() => {
+        const a = document.createElement('a');
+        a.href = seg.downloadUrl;
+        a.download = seg.filename;
+        a.click();
+      }, i * 250);
+    });
+  });
+
+  // ─── REFRESH ──────────────────────────────────────────────────────────
+  refreshBtn.addEventListener('click', () => {
+    state.file = null;
+    state.segments = [];
+    fileInput.value = '';
+    fileInfo.classList.remove('show');
+    waveformRow.classList.remove('show');
+    segmentsList.classList.remove('show');
+    segmentsContainer.innerHTML = '';
+    waveform.innerHTML = '';
+    hideStatus();
+    dropTitle.textContent = 'Drop audio here';
+    minutesInput.value = 5;
+    updateSegBar();
+    setProcessBtn('idle');
+    downloadBtn.disabled = true;
+  });
+
+  // ─── WAV ENCODER ──────────────────────────────────────────────────────
+  function bufferToWav(buf) {
+    const numCh = buf.numberOfChannels;
+    const sr    = buf.sampleRate;
+    const len   = buf.length;
+    const ab    = new ArrayBuffer(44 + len * numCh * 2);
+    const view  = new DataView(ab);
+    const ws = (off, str) => { for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i)); };
+    ws(0, 'RIFF'); view.setUint32(4, 36 + len * numCh * 2, true);
+    ws(8, 'WAVE'); ws(12, 'fmt ');
+    view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+    view.setUint16(22, numCh, true); view.setUint32(24, sr, true);
+    view.setUint32(28, sr * numCh * 2, true); view.setUint16(32, numCh * 2, true);
+    view.setUint16(34, 16, true); ws(36, 'data');
+    view.setUint32(40, len * numCh * 2, true);
+    let off = 44;
+    for (let i = 0; i < len; i++) {
+      for (let ch = 0; ch < numCh; ch++) {
+        const s = Math.max(-1, Math.min(1, buf.getChannelData(ch)[i]));
+        view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        off += 2;
+      }
+    }
+    return ab;
+  }
+</script>
+
+</body>
+</html>
