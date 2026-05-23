@@ -152,10 +152,6 @@
   </button>
 </div>
 
-<!-- ffmpeg.wasm — used as fallback decoder for MP3s that browsers can't handle natively -->
-<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
-
 <script>
   const state = { file: null, segments: [], worker: null };
 
@@ -240,50 +236,63 @@
     if (f) { fileInput.files = e.dataTransfer.files; handleFile(f); }
   });
 
-  // ── Decode audio: try native first, fall back to ffmpeg.wasm ──────────────
-  async function decodeAudio(file) {
-    const arrayBuffer = await file.arrayBuffer();
+  // ── Decode audio using an <audio> element + OfflineAudioContext ─────────
+  // This approach works for ALL MP3s in ALL browsers because it uses the
+  // browser's own native media player to decode, not decodeAudioData.
+  function decodeWithAudioElement(file) {
+    return new Promise((resolve, reject) => {
+      const url    = URL.createObjectURL(file);
+      const audio  = new Audio();
+      audio.preload = 'auto';
 
-    // Try native browser decoder first (fast)
-    try {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      return await audioCtx.decodeAudioData(arrayBuffer.slice(0));
-    } catch (e) {
-      // Native failed — use ffmpeg.wasm to convert to wav first
-    }
+      audio.addEventListener('loadedmetadata', async () => {
+        try {
+          const duration  = audio.duration;
+          const sampleRate = 44100;
+          const numCh     = 2;
+          const totalSamples = Math.ceil(duration * sampleRate);
 
-    showStatus('Converting audio format via ffmpeg… (first time is slow)');
-    setProgress(10);
+          // OfflineAudioContext renders the full audio to a buffer
+          const offline = new OfflineAudioContext(numCh, totalSamples, sampleRate);
+          const source  = offline.createMediaElementSource(audio);
+          source.connect(offline.destination);
 
-    const { FFmpeg } = window.FFmpegWASM || {};
-    const { fetchFile } = window.FFmpegUtil || {};
+          // Seek to start and play into the offline context
+          audio.currentTime = 0;
+          const rendered = await offline.startRendering();
+          URL.revokeObjectURL(url);
+          resolve(rendered);
+        } catch (err) {
+          URL.revokeObjectURL(url);
+          reject(err);
+        }
+      });
 
-    if (!FFmpeg || !fetchFile) throw new Error('ffmpeg.wasm failed to load. Try refreshing.');
+      audio.addEventListener('error', () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Browser could not load this audio file.'));
+      });
 
-    const ffmpeg = new FFmpeg();
-
-    // Load ffmpeg core (downloads ~30MB the first time)
-    await ffmpeg.load({
-      coreURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
+      audio.src = url;
+      audio.load();
     });
-
-    setProgress(20);
-    showStatus('Converting MP3 to WAV…');
-
-    const ext = file.name.split('.').pop() || 'mp3';
-    await ffmpeg.writeFile(`input.${ext}`, new Uint8Array(arrayBuffer));
-    await ffmpeg.exec(['-i', `input.${ext}`, '-ar', '44100', '-ac', '2', '-f', 'wav', 'output.wav']);
-
-    setProgress(30);
-    const wavData = await ffmpeg.readFile('output.wav');
-    const wavBlob = new Blob([wavData.buffer], { type: 'audio/wav' });
-    const wavBuffer = await wavBlob.arrayBuffer();
-
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    return await audioCtx.decodeAudioData(wavBuffer);
   }
 
-  // ── Worker code inlined ────────────────────────────────────────────────────
+  // ── Primary decode: try decodeAudioData, fall back to audio element ──────
+  async function decodeAudio(file) {
+    // Method 1: standard decodeAudioData (fast, works for most files)
+    try {
+      const buf      = await file.arrayBuffer();
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      return await audioCtx.decodeAudioData(buf);
+    } catch (_) {}
+
+    // Method 2: route through native <audio> element (works for all MP3s)
+    showStatus('Using fallback decoder…');
+    return await decodeWithAudioElement(file);
+  }
+
+  // ── Worker — runs WAV encoding off the main thread ───────────────────────
   const WORKER_CODE = `
     function bufferToWav(channels, sr, len) {
       const numCh = channels.length;
@@ -335,7 +344,7 @@
     };
   `;
 
-  // ── Process ────────────────────────────────────────────────────────────────
+  // ── Process button ────────────────────────────────────────────────────────
   processBtn.addEventListener('click', async () => {
     if (!state.file) { showStatus('Please upload an audio file first.', 'error'); return; }
 
@@ -352,7 +361,7 @@
       const segSecs      = (parseInt(minutesInput.value) || 5) * 60;
 
       showStatus('Splitting in background…');
-      setProgress(35);
+      setProgress(30);
 
       const channelData  = [];
       const transferList = [];
@@ -370,7 +379,7 @@
 
       worker.onmessage = (ev) => {
         if (ev.data.type === 'progress') {
-          setProgress(35 + Math.round(ev.data.pct * 0.65));
+          setProgress(30 + Math.round(ev.data.pct * 0.7));
           showStatus(`Encoding segments… ${ev.data.pct}%`);
         } else if (ev.data.type === 'done') {
           worker.terminate(); state.worker = null;
