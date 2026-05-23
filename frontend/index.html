@@ -7,14 +7,9 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Syne:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --sand: #d6ac80;
-      --crimson: #940000;
-      --espresso: #5a4230;
-      --ink: #040400;
-      --sand-light: #f0dfc4;
-      --sand-xlight: #faf4ec;
-      --crimson-dark: #6b0000;
-      --espresso-light: #8a6347;
+      --sand: #d6ac80; --crimson: #940000; --espresso: #5a4230; --ink: #040400;
+      --sand-light: #f0dfc4; --sand-xlight: #faf4ec;
+      --crimson-dark: #6b0000; --espresso-light: #8a6347;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Syne', sans-serif; background: #f2ece3; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
@@ -59,7 +54,7 @@
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
     .btn-secondary { background: var(--sand-light); color: var(--espresso); border: 1.5px solid var(--sand); }
     .btn-secondary:hover { background: var(--sand); color: #fff; }
-    .btn-secondary:active { transform: scale(0.97); }
+    .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-ghost { background: transparent; color: var(--espresso-light); border: 1.5px solid var(--sand); width: 100%; justify-content: center; margin-top: 10px; font-size: 12px; }
     .btn-ghost:hover { color: var(--espresso); border-color: var(--espresso); }
     .status-bar { display: none; align-items: center; gap: 8px; border-radius: 8px; padding: 8px 12px; margin-top: 10px; font-size: 12px; font-weight: 500; }
@@ -67,13 +62,12 @@
     .status-bar.loading { background: #fff8f5; border: 1px solid #f0c0c0; color: var(--crimson); }
     .status-bar.success { background: #f0faf5; border: 1px solid #9fd4b8; color: #2a6b4a; }
     .status-bar.error   { background: #fff0f0; border: 1px solid #f0b0b0; color: #8b0000; }
+    .status-bar.warning { background: #fffbf0; border: 1px solid #e8d48a; color: #7a5c00; }
     .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; animation: pulse 1s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-    /* Progress bar */
     .progress-wrap { display: none; height: 6px; background: var(--sand-light); border-radius: 3px; overflow: hidden; margin-top: 10px; }
     .progress-wrap.show { display: block; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--espresso), var(--crimson)); border-radius: 3px; width: 0%; transition: width 0.4s ease; }
-    /* Segments list */
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--espresso), var(--crimson)); border-radius: 3px; width: 0%; transition: width 0.5s ease; }
     .segments-list { display: none; margin-top: 12px; }
     .segments-list.show { display: block; }
     .segments-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--espresso-light); margin-bottom: 8px; }
@@ -158,10 +152,10 @@
 </div>
 
 <script>
-  // ── CONFIG: point this at your Render backend URL ──────────────────────────
-  // When serving index.html FROM FastAPI itself (same domain), use "".
-  // When running frontend separately, set your Render URL e.g.:
-       const API = "https://audio-segment-tool.onrender.com";
+  // ── CONFIG ─────────────────────────────────────────────────────────────────
+  // Set to your Render backend URL. If frontend and backend are on the same
+  // domain, use "". Otherwise: "https://your-app.onrender.com"
+  const API = "https://audio-segment-tool.onrender.com";
   // ──────────────────────────────────────────────────────────────────────────
 
   let state = { jobId: null, segments: [], pollTimer: null };
@@ -188,34 +182,35 @@
   const progressFill      = $('progressFill');
 
   // ── UI helpers ─────────────────────────────────────────────────────────────
-  function fmt(bytes) {
-    return bytes < 1048576 ? (bytes/1024).toFixed(1)+' KB' : (bytes/1048576).toFixed(1)+' MB';
-  }
-  function fmtSec(s) {
-    return `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
-  }
+  function fmt(b) { return b < 1048576 ? (b/1024).toFixed(1)+' KB' : (b/1048576).toFixed(1)+' MB'; }
+  function fmtSec(s) { return `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`; }
+
   function showStatus(msg, type='loading') {
     statusBar.className = `status-bar show ${type}`;
     statusText.textContent = msg;
   }
   function hideStatus() { statusBar.classList.remove('show'); }
+
   function setProgress(pct) {
     progressWrap.classList.add('show');
-    progressFill.style.width = pct + '%';
+    progressFill.style.width = Math.min(pct, 100) + '%';
   }
   function hideProgress() {
     progressWrap.classList.remove('show');
     progressFill.style.width = '0%';
   }
+
   function setProcessBtn(s) {
+    const spinSvg = `<svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;animation:spin 1s linear infinite;display:inline-block"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></svg>`;
     const map = {
       idle:    `<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Process Audio`,
-      loading: `<svg viewBox="0 0 24 24" style="animation:spin 1s linear infinite;display:inline-block;width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></svg> Processing…`,
+      loading: `${spinSvg} Processing…`,
       done:    `<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Done`,
     };
     processBtn.innerHTML = map[s] || map.idle;
     processBtn.disabled = s === 'loading';
   }
+
   function buildWaveform() {
     waveform.innerHTML = '';
     for (let i = 0; i < 48; i++) {
@@ -225,6 +220,7 @@
       waveform.appendChild(b);
     }
   }
+
   function updateSegBar() {
     const v = Math.min(Math.max(parseInt(minutesInput.value)||1,1),60);
     segFill.style.width = Math.round((v/60)*100)+'%';
@@ -263,7 +259,7 @@
     if (f) { fileInput.files = e.dataTransfer.files; handleFile(f); }
   });
 
-  // ── Process: upload → segment → poll ──────────────────────────────────────
+  // ── Process ────────────────────────────────────────────────────────────────
   processBtn.addEventListener('click', async () => {
     if (!state.file) { showStatus('Please upload an audio file first.', 'error'); return; }
 
@@ -294,7 +290,7 @@
       });
       if (!segRes.ok) throw new Error(`Segment request failed: ${segRes.statusText}`);
 
-      // 3. Poll status
+      // 3. Poll
       pollStatus();
 
     } catch (err) {
@@ -304,25 +300,34 @@
     }
   });
 
+  // ── Polling with retry ─────────────────────────────────────────────────────
   function pollStatus() {
     clearInterval(state.pollTimer);
+    let retryCount = 0;
+
     state.pollTimer = setInterval(async () => {
       try {
         const res  = await fetch(`${API}/segment/${state.jobId}/status`);
+
+        // If server restarted and returned non-JSON / 5xx, treat as retry
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
         const data = await res.json();
+        retryCount = 0; // reset on success
 
         setProgress(data.progress || 0);
 
-        if (data.status === 'processing') {
+        if (data.status === 'processing' || data.status === 'pending') {
           const labels = {
+            5:  'Resuming after restart…',
             10: 'Loading audio…',
             25: 'Reducing noise…',
             40: 'Splitting segments…',
             60: 'Filtering segments…',
             85: 'Building zip…',
           };
-          const pct = data.progress || 0;
-          const closest = Object.keys(labels).reverse().find(k => pct >= k);
+          const pct     = data.progress || 0;
+          const closest = Object.keys(labels).reverse().find(k => pct >= parseInt(k));
           showStatus(closest ? labels[closest] : 'Processing…');
 
         } else if (data.status === 'done') {
@@ -340,13 +345,20 @@
           showStatus('Server error: ' + (data.message || 'unknown'), 'error');
           hideProgress();
         }
+
       } catch (err) {
-        clearInterval(state.pollTimer);
-        setProcessBtn('idle');
-        showStatus('Lost connection to server.', 'error');
-        hideProgress();
+        retryCount++;
+        if (retryCount >= 5) {
+          clearInterval(state.pollTimer);
+          setProcessBtn('idle');
+          showStatus('Lost connection to server. Please try again.', 'error');
+          hideProgress();
+        } else {
+          // Keep polling — server is likely mid-restart (takes ~30s on free tier)
+          showStatus(`Server restarting, retrying… (${retryCount}/5)`, 'warning');
+        }
       }
-    }, 1500);
+    }, 2000); // poll every 2s
   }
 
   // ── Render segment list ────────────────────────────────────────────────────
@@ -374,9 +386,8 @@
   });
 
   // ── Refresh ────────────────────────────────────────────────────────────────
-  refreshBtn.addEventListener('click', async () => {
+  refreshBtn.addEventListener('click', () => {
     clearInterval(state.pollTimer);
-    // Clean up server-side job
     if (state.jobId) {
       fetch(`${API}/segment/${state.jobId}`, { method: 'DELETE' }).catch(() => {});
     }

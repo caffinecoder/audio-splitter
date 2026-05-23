@@ -1,6 +1,7 @@
 """
 Audio Segment Tool — FastAPI Backend
-Job state is persisted to disk so Render restarts don't lose jobs.
+- Job state persisted to disk (survives restarts)
+- Interrupted jobs auto-resume on startup
 """
 
 import os
@@ -63,7 +64,6 @@ def load_job(job_id: str) -> dict | None:
 def save_job(job_id: str, data: dict):
     f = job_file(job_id)
     f.parent.mkdir(parents=True, exist_ok=True)
-    # Convert Path objects to strings before saving
     serializable = {
         k: str(v) if isinstance(v, Path) else v
         for k, v in data.items()
@@ -80,6 +80,22 @@ def update_job(job_id: str, **kwargs):
 class SegmentRequest(BaseModel):
     jobId: str
     segmentMinutes: int = 5
+
+# ─── Startup: resume any interrupted jobs ─────────────────────────────────────
+
+@app.on_event("startup")
+async def resume_interrupted_jobs():
+    if not BASE_DIR.exists():
+        return
+    for job_dir in BASE_DIR.iterdir():
+        if not job_dir.is_dir():
+            continue
+        job_id = job_dir.name
+        job = load_job(job_id)
+        if job and job.get("status") == "processing":
+            seg_min = job.get("segmentMinutes", 5)
+            update_job(job_id, progress=5, message="Resuming after server restart…")
+            executor.submit(_process_audio, job_id, seg_min)
 
 # ─── Blocking audio work ──────────────────────────────────────────────────────
 
@@ -177,15 +193,16 @@ async def upload_audio(audio: UploadFile = File(...)):
         duration = 0.0
 
     save_job(job_id, {
-        "status":    "pending",
-        "progress":  0,
-        "message":   "",
-        "audio_path": str(save_path),
-        "segments":  [],
-        "zip_path":  None,
-        "filename":  audio.filename,
-        "size":      len(content),
-        "duration":  round(duration, 2),
+        "status":         "pending",
+        "progress":       0,
+        "message":        "",
+        "audio_path":     str(save_path),
+        "segments":       [],
+        "zip_path":       None,
+        "filename":       audio.filename,
+        "size":           len(content),
+        "duration":       round(duration, 2),
+        "segmentMinutes": 5,
     })
 
     return {
@@ -204,8 +221,10 @@ async def start_segmentation(req: SegmentRequest):
     if job["status"] == "processing":
         raise HTTPException(409, "Job is already processing.")
 
-    executor.submit(_process_audio, req.jobId, max(1, min(req.segmentMinutes, 120)))
-    return {"jobId": req.jobId, "segmentMinutes": req.segmentMinutes}
+    seg_min = max(1, min(req.segmentMinutes, 120))
+    update_job(req.jobId, segmentMinutes=seg_min)
+    executor.submit(_process_audio, req.jobId, seg_min)
+    return {"jobId": req.jobId, "segmentMinutes": seg_min}
 
 
 @app.get("/segment/{job_id}/status")
