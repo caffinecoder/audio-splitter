@@ -46,15 +46,6 @@
     .minutes-unit { font-size: 12px; color: var(--espresso-light); }
     .seg-bar { flex: 1; height: 6px; background: var(--sand-light); border-radius: 3px; overflow: hidden; min-width: 40px; }
     .seg-fill { height: 100%; background: linear-gradient(90deg, var(--espresso), var(--crimson)); border-radius: 3px; width: 0%; transition: width 0.4s ease; }
-    /* Toggle switch */
-    .toggle-wrap { display: flex; align-items: center; gap: 8px; cursor: pointer; white-space: nowrap; }
-    .toggle-wrap input { display: none; }
-    .toggle-track { width: 34px; height: 18px; background: var(--sand); border-radius: 9px; position: relative; transition: background 0.2s; flex-shrink: 0; }
-    .toggle-track::after { content: ''; position: absolute; width: 12px; height: 12px; background: #fff; border-radius: 50%; top: 3px; left: 3px; transition: left 0.2s; }
-    input:checked + .toggle-track { background: var(--espresso); }
-    input:checked + .toggle-track::after { left: 19px; }
-    .toggle-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--espresso-light); }
-    .toggle-note { font-size: 10px; color: var(--espresso-light); margin-top: 2px; }
     .btn-row { display: flex; gap: 10px; }
     .btn { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 10px; padding: 10px 20px; transition: all 0.15s ease; border: none; display: flex; align-items: center; gap: 7px; }
     .btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -71,12 +62,11 @@
     .status-bar.loading { background: #fff8f5; border: 1px solid #f0c0c0; color: var(--crimson); }
     .status-bar.success { background: #f0faf5; border: 1px solid #9fd4b8; color: #2a6b4a; }
     .status-bar.error   { background: #fff0f0; border: 1px solid #f0b0b0; color: #8b0000; }
-    .status-bar.warning { background: #fffbf0; border: 1px solid #e8d48a; color: #7a5c00; }
     .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; animation: pulse 1s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     .progress-wrap { display: none; height: 6px; background: var(--sand-light); border-radius: 3px; overflow: hidden; margin-top: 10px; }
     .progress-wrap.show { display: block; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--espresso), var(--crimson)); border-radius: 3px; width: 0%; transition: width 0.5s ease; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--espresso), var(--crimson)); border-radius: 3px; width: 0%; transition: width 0.3s ease; }
     .segments-list { display: none; margin-top: 12px; }
     .segments-list.show { display: block; }
     .segments-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--espresso-light); margin-bottom: 8px; }
@@ -127,14 +117,6 @@
       <span class="minutes-unit">min</span>
       <div class="seg-bar"><div class="seg-fill" id="segFill"></div></div>
     </div>
-    <div>
-      <label class="toggle-wrap">
-        <input type="checkbox" id="denoiseToggle" />
-        <span class="toggle-track"></span>
-        <span class="toggle-label">Denoise</span>
-      </label>
-      <p class="toggle-note">slower on free tier</p>
-    </div>
   </div>
 
   <div class="btn-row">
@@ -152,9 +134,9 @@
     <div class="progress-fill" id="progressFill"></div>
   </div>
 
-  <div class="status-bar loading" id="statusBar">
+  <div class="status-bar" id="statusBar">
     <div class="status-dot"></div>
-    <span id="statusText">Processing…</span>
+    <span id="statusText"></span>
   </div>
 
   <div class="segments-list" id="segmentsList">
@@ -171,10 +153,10 @@
 </div>
 
 <script>
-  const API = "https://audio-segment-tool.onrender.com";
+  // ── State ──────────────────────────────────────────────────────────────────
+  const state = { file: null, segments: [], worker: null };
 
-  let state = { jobId: null, segments: [], pollTimer: null };
-
+  // ── DOM ────────────────────────────────────────────────────────────────────
   const $ = id => document.getElementById(id);
   const dropZone          = $('dropZone');
   const fileInput         = $('fileInput');
@@ -184,7 +166,6 @@
   const waveformRow       = $('waveformRow');
   const waveform          = $('waveform');
   const minutesInput      = $('minutesInput');
-  const denoiseToggle     = $('denoiseToggle');
   const segFill           = $('segFill');
   const processBtn        = $('processBtn');
   const downloadBtn       = $('downloadBtn');
@@ -197,6 +178,7 @@
   const progressWrap      = $('progressWrap');
   const progressFill      = $('progressFill');
 
+  // ── Helpers ────────────────────────────────────────────────────────────────
   function fmt(b) { return b < 1048576 ? (b/1024).toFixed(1)+' KB' : (b/1048576).toFixed(1)+' MB'; }
   function fmtSec(s) { return `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`; }
 
@@ -204,7 +186,7 @@
     statusBar.className = `status-bar show ${type}`;
     statusText.textContent = msg;
   }
-  function hideStatus() { statusBar.classList.remove('show'); }
+  function hideStatus() { statusBar.className = 'status-bar'; }
   function setProgress(pct) { progressWrap.classList.add('show'); progressFill.style.width = Math.min(pct,100)+'%'; }
   function hideProgress() { progressWrap.classList.remove('show'); progressFill.style.width = '0%'; }
 
@@ -236,9 +218,12 @@
   minutesInput.addEventListener('input', updateSegBar);
   updateSegBar();
 
+  // ── File handling ──────────────────────────────────────────────────────────
   function handleFile(file) {
-    if (!file || !file.type.startsWith('audio/')) { showStatus('Please upload a valid audio file.', 'error'); return; }
-    state.file = file; state.jobId = null; state.segments = [];
+    if (!file || !file.type.startsWith('audio/')) {
+      showStatus('Please upload a valid audio file.', 'error'); return;
+    }
+    state.file = file; state.segments = [];
     fileName.textContent = file.name;
     fileSize.textContent = fmt(file.size);
     fileInfo.classList.add('show');
@@ -247,7 +232,8 @@
     dropTitle.textContent = 'File loaded';
     segmentsList.classList.remove('show');
     segmentsContainer.innerHTML = '';
-    hideStatus(); hideProgress(); setProcessBtn('idle');
+    hideStatus(); hideProgress();
+    setProcessBtn('idle');
     downloadBtn.disabled = true;
   }
 
@@ -260,90 +246,135 @@
     if (f) { fileInput.files = e.dataTransfer.files; handleFile(f); }
   });
 
+  // ── Worker code (inlined so no separate file needed) ───────────────────────
+  const WORKER_CODE = `
+    function bufferToWav(channels, sr, len) {
+      const numCh = channels.length;
+      const ab = new ArrayBuffer(44 + len * numCh * 2);
+      const view = new DataView(ab);
+      const ws = (off, str) => { for (let i = 0; i < str.length; i++) view.setUint8(off+i, str.charCodeAt(i)); };
+      ws(0,'RIFF'); view.setUint32(4, 36+len*numCh*2, true);
+      ws(8,'WAVE'); ws(12,'fmt ');
+      view.setUint32(16,16,true); view.setUint16(20,1,true);
+      view.setUint16(22,numCh,true); view.setUint32(24,sr,true);
+      view.setUint32(28,sr*numCh*2,true); view.setUint16(32,numCh*2,true);
+      view.setUint16(34,16,true); ws(36,'data');
+      view.setUint32(40,len*numCh*2,true);
+      let off = 44;
+      for (let i = 0; i < len; i++) {
+        for (let ch = 0; ch < numCh; ch++) {
+          const s = Math.max(-1, Math.min(1, channels[ch][i]));
+          view.setInt16(off, s < 0 ? s*0x8000 : s*0x7FFF, true);
+          off += 2;
+        }
+      }
+      return ab;
+    }
+
+    self.onmessage = function(e) {
+      const { channelData, sampleRate, segSecs, numCh, totalSamples } = e.data;
+      const segLen  = Math.floor(segSecs * sampleRate);
+      const numSegs = Math.ceil(totalSamples / segLen);
+      const results = [];
+
+      for (let i = 0; i < numSegs; i++) {
+        const start  = i * segLen;
+        const end    = Math.min(start + segLen, totalSamples);
+        const len    = end - start;
+        const slices = channelData.map(ch => ch.slice(start, end));
+        const wav    = bufferToWav(slices, sampleRate, len);
+        const blob   = new Blob([wav], { type: 'audio/wav' });
+        const url    = URL.createObjectURL(blob);
+
+        results.push({
+          label:    'Segment ' + (i+1),
+          filename: 'segment_' + String(i).padStart(3,'0') + '.wav',
+          startSec: i * segSecs,
+          endSec:   Math.min((i+1) * segSecs, totalSamples / sampleRate),
+          url,
+        });
+
+        self.postMessage({ type: 'progress', pct: Math.round(((i+1)/numSegs)*100) });
+      }
+
+      self.postMessage({ type: 'done', results });
+    };
+  `;
+
+  // ── Process ────────────────────────────────────────────────────────────────
   processBtn.addEventListener('click', async () => {
     if (!state.file) { showStatus('Please upload an audio file first.', 'error'); return; }
-    setProcessBtn('loading'); showStatus('Uploading to server…'); setProgress(5);
-    clearInterval(state.pollTimer);
+
+    setProcessBtn('loading');
+    showStatus('Decoding audio… (large files take a moment)');
+    setProgress(5);
+    state.segments = [];
 
     try {
-      const form = new FormData();
-      form.append('audio', state.file);
-      const upRes = await fetch(`${API}/upload`, { method: 'POST', body: form });
-      if (!upRes.ok) throw new Error(`Upload failed: ${upRes.statusText}`);
-      const upData = await upRes.json();
-      state.jobId = upData.jobId;
+      const arrayBuffer = await state.file.arrayBuffer();
+      const audioCtx    = new (window.AudioContext || window.webkitAudioContext)();
+
+      showStatus('Decoding audio…');
       setProgress(15);
 
-      showStatus('Starting segmentation…');
-      const segRes = await fetch(`${API}/segment`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobId: state.jobId,
-          segmentMinutes: parseInt(minutesInput.value) || 5,
-          denoise: denoiseToggle.checked,
-        }),
-      });
-      if (!segRes.ok) throw new Error(`Segment request failed: ${segRes.statusText}`);
-      pollStatus();
+      const decoded = await audioCtx.decodeAudioData(arrayBuffer);
+      const sr           = decoded.sampleRate;
+      const numCh        = decoded.numberOfChannels;
+      const totalSamples = decoded.length;
+      const segSecs      = (parseInt(minutesInput.value) || 5) * 60;
 
-    } catch (err) {
-      setProcessBtn('idle');
-      showStatus('Error: ' + err.message, 'error');
-      hideProgress();
-    }
-  });
+      showStatus('Splitting in background…');
+      setProgress(25);
 
-  function pollStatus() {
-    clearInterval(state.pollTimer);
-    let retryCount = 0;
+      // Extract channel data and transfer to worker
+      const channelData  = [];
+      const transferList = [];
+      for (let ch = 0; ch < numCh; ch++) {
+        const copy = new Float32Array(decoded.getChannelData(ch));
+        channelData.push(copy);
+        transferList.push(copy.buffer);
+      }
 
-    state.pollTimer = setInterval(async () => {
-      try {
-        const res = await fetch(`${API}/segment/${state.jobId}/status`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        retryCount = 0;
+      const blob   = new Blob([WORKER_CODE], { type: 'application/javascript' });
+      const worker = new Worker(URL.createObjectURL(blob));
+      state.worker = worker;
 
-        setProgress(data.progress || 0);
+      worker.postMessage({ channelData, sampleRate: sr, segSecs, numCh, totalSamples }, transferList);
 
-        if (data.status === 'processing' || data.status === 'pending') {
-          const labels = { 5:'Resuming after restart…', 10:'Loading audio…', 20:'Preparing audio…', 40:'Splitting segments…', 60:'Filtering & saving…', 85:'Building zip…' };
-          const pct = data.progress || 0;
-          const key = Object.keys(labels).reverse().find(k => pct >= parseInt(k));
-          showStatus(key ? labels[key] : 'Processing…');
-
-        } else if (data.status === 'done') {
-          clearInterval(state.pollTimer);
-          state.segments = data.segments || [];
+      worker.onmessage = (ev) => {
+        if (ev.data.type === 'progress') {
+          const pct = 25 + Math.round(ev.data.pct * 0.75);
+          setProgress(pct);
+          showStatus(`Encoding segments… ${ev.data.pct}%`);
+        } else if (ev.data.type === 'done') {
+          worker.terminate();
+          state.worker = null;
+          state.segments = ev.data.results;
           setProcessBtn('done');
+          setProgress(100);
           showStatus(`${state.segments.length} segment${state.segments.length !== 1 ? 's' : ''} ready`, 'success');
           renderSegments(state.segments);
           downloadBtn.disabled = false;
-          hideProgress();
-
-        } else if (data.status === 'error') {
-          clearInterval(state.pollTimer);
-          setProcessBtn('idle');
-          showStatus('Server error: ' + (data.message || 'unknown'), 'error');
-          hideProgress();
+          setTimeout(hideProgress, 800);
         }
+      };
 
-      } catch (err) {
-        retryCount++;
-        // Free tier restart takes ~30s. Retry for up to 90s (45 × 2s) before giving up.
-        if (retryCount >= 45) {
-          clearInterval(state.pollTimer);
-          setProcessBtn('idle');
-          showStatus('Lost connection. Please refresh and try again.', 'error');
-          hideProgress();
-        } else {
-          showStatus(`Server restarting, retrying… (${retryCount}/45)`, 'warning');
-        }
-      }
-    }, 2000);
-  }
+      worker.onerror = (err) => {
+        worker.terminate();
+        state.worker = null;
+        setProcessBtn('idle');
+        hideProgress();
+        showStatus('Error: ' + err.message, 'error');
+      };
 
+    } catch (err) {
+      setProcessBtn('idle');
+      hideProgress();
+      showStatus('Error: ' + err.message, 'error');
+    }
+  });
+
+  // ── Render segment list ────────────────────────────────────────────────────
   function renderSegments(segments) {
     segmentsContainer.innerHTML = '';
     segments.forEach(seg => {
@@ -352,24 +383,27 @@
       div.innerHTML = `
         <span>${seg.label}</span>
         <span class="seg-range">${fmtSec(seg.startSec)} – ${fmtSec(seg.endSec)}</span>
-        <a class="segment-dl" href="${API}${seg.downloadUrl}" download>Download</a>`;
+        <a class="segment-dl" href="${seg.url}" download="${seg.filename}">Download</a>`;
       segmentsContainer.appendChild(div);
     });
     segmentsList.classList.add('show');
   }
 
+  // ── Download all ───────────────────────────────────────────────────────────
   downloadBtn.addEventListener('click', () => {
-    if (!state.jobId || !state.segments.length) return;
-    const a = document.createElement('a');
-    a.href = `${API}/segment/${state.jobId}/download-all`;
-    a.download = 'segments.zip';
-    a.click();
+    if (!state.segments.length) return;
+    state.segments.forEach((seg, i) => {
+      setTimeout(() => {
+        const a = document.createElement('a');
+        a.href = seg.url; a.download = seg.filename; a.click();
+      }, i * 300);
+    });
   });
 
+  // ── Refresh ────────────────────────────────────────────────────────────────
   refreshBtn.addEventListener('click', () => {
-    clearInterval(state.pollTimer);
-    if (state.jobId) fetch(`${API}/segment/${state.jobId}`, { method: 'DELETE' }).catch(() => {});
-    state = { jobId: null, segments: [], pollTimer: null };
+    if (state.worker) { state.worker.terminate(); state.worker = null; }
+    state.file = null; state.segments = [];
     fileInput.value = '';
     fileInfo.classList.remove('show');
     waveformRow.classList.remove('show');
