@@ -72,7 +72,7 @@
     .segments-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--espresso-light); margin-bottom: 8px; }
     .segment-item { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid var(--sand); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; font-size: 12px; color: var(--espresso); gap: 8px; }
     .seg-range { color: var(--espresso-light); white-space: nowrap; }
-    .segment-dl { font-size: 11px; color: var(--crimson); font-weight: 600; cursor: pointer; text-decoration: underline; white-space: nowrap; }
+    .segment-dl { font-size: 11px; color: var(--crimson); font-weight: 600; cursor: pointer; text-decoration: underline; white-space: nowrap; flex-shrink: 0; }
     .segment-dl:hover { color: var(--crimson-dark); }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
@@ -113,7 +113,7 @@
   <div class="options-row">
     <div class="minutes-row">
       <span class="minutes-label">Segment every</span>
-      <input type="number" class="minutes-input" id="minutesInput" value="5" min="1" max="60" />
+      <input type="number" class="minutes-input" id="minutesInput" value="5" min="1" max="120" />
       <span class="minutes-unit">min</span>
       <div class="seg-bar"><div class="seg-fill" id="segFill"></div></div>
     </div>
@@ -153,36 +153,38 @@
 </div>
 
 <script>
+  // ─── State ────────────────────────────────────────────────────────────────
   const state = { file: null, segments: [], worker: null };
 
+  // ─── DOM ──────────────────────────────────────────────────────────────────
   const $ = id => document.getElementById(id);
-  const dropZone          = $('dropZone');
-  const fileInput         = $('fileInput');
-  const fileInfo          = $('fileInfo');
-  const fileName          = $('fileName');
-  const fileSize          = $('fileSize');
-  const waveformRow       = $('waveformRow');
-  const waveform          = $('waveform');
-  const minutesInput      = $('minutesInput');
-  const segFill           = $('segFill');
-  const processBtn        = $('processBtn');
-  const downloadBtn       = $('downloadBtn');
-  const refreshBtn        = $('refreshBtn');
-  const statusBar         = $('statusBar');
-  const statusText        = $('statusText');
-  const dropTitle         = $('dropTitle');
-  const segmentsList      = $('segmentsList');
-  const segmentsContainer = $('segmentsContainer');
-  const progressWrap      = $('progressWrap');
-  const progressFill      = $('progressFill');
+  const dropZone = $('dropZone'), fileInput = $('fileInput'),
+        fileInfo = $('fileInfo'), fileName = $('fileName'), fileSize = $('fileSize'),
+        waveformRow = $('waveformRow'), waveform = $('waveform'),
+        minutesInput = $('minutesInput'), segFill = $('segFill'),
+        processBtn = $('processBtn'), downloadBtn = $('downloadBtn'),
+        refreshBtn = $('refreshBtn'), statusBar = $('statusBar'),
+        statusText = $('statusText'), dropTitle = $('dropTitle'),
+        segmentsList = $('segmentsList'), segmentsContainer = $('segmentsContainer'),
+        progressWrap = $('progressWrap'), progressFill = $('progressFill');
 
-  function fmt(b) { return b < 1048576 ? (b/1024).toFixed(1)+' KB' : (b/1048576).toFixed(1)+' MB'; }
-  function fmtSec(s) { return `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`; }
-  function showStatus(msg, type='loading') { statusBar.className = `status-bar show ${type}`; statusText.textContent = msg; }
+  // ─── UI helpers ───────────────────────────────────────────────────────────
+  const fmt    = b => b < 1048576 ? (b/1024).toFixed(1)+' KB' : (b/1048576).toFixed(1)+' MB';
+  const fmtSec = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+
+  function showStatus(msg, type = 'loading') {
+    statusBar.className = `status-bar show ${type}`;
+    statusText.textContent = msg;
+  }
   function hideStatus() { statusBar.className = 'status-bar'; }
-  function setProgress(pct) { progressWrap.classList.add('show'); progressFill.style.width = Math.min(pct,100)+'%'; }
-  function hideProgress() { progressWrap.classList.remove('show'); progressFill.style.width = '0%'; }
-
+  function setProgress(pct) {
+    progressWrap.classList.add('show');
+    progressFill.style.width = Math.min(pct, 100) + '%';
+  }
+  function hideProgress() {
+    progressWrap.classList.remove('show');
+    progressFill.style.width = '0%';
+  }
   function setProcessBtn(s) {
     const spin = `<svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;animation:spin 1s linear infinite;display:inline-block"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></svg>`;
     const map = {
@@ -193,7 +195,6 @@
     processBtn.innerHTML = map[s] || map.idle;
     processBtn.disabled = s === 'loading';
   }
-
   function buildWaveform() {
     waveform.innerHTML = '';
     for (let i = 0; i < 48; i++) {
@@ -203,16 +204,18 @@
       waveform.appendChild(b);
     }
   }
-
   function updateSegBar() {
-    const v = Math.min(Math.max(parseInt(minutesInput.value)||1,1),60);
-    segFill.style.width = Math.round((v/60)*100)+'%';
+    const v = Math.min(Math.max(parseInt(minutesInput.value)||1,1),120);
+    segFill.style.width = Math.round((v/120)*100)+'%';
   }
   minutesInput.addEventListener('input', updateSegBar);
   updateSegBar();
 
+  // ─── File handling ────────────────────────────────────────────────────────
   function handleFile(file) {
-    if (!file || !file.type.startsWith('audio/')) { showStatus('Please upload a valid audio file.', 'error'); return; }
+    if (!file || !file.type.startsWith('audio/')) {
+      showStatus('Please upload a valid audio file.', 'error'); return;
+    }
     state.file = file; state.segments = [];
     fileName.textContent = file.name;
     fileSize.textContent = fmt(file.size);
@@ -226,7 +229,6 @@
     setProcessBtn('idle');
     downloadBtn.disabled = true;
   }
-
   fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
   dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
   dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
@@ -236,151 +238,103 @@
     if (f) { fileInput.files = e.dataTransfer.files; handleFile(f); }
   });
 
-  // ── Decode audio using an <audio> element + OfflineAudioContext ─────────
-  // This approach works for ALL MP3s in ALL browsers because it uses the
-  // browser's own native media player to decode, not decodeAudioData.
-  function decodeWithAudioElement(file) {
-    return new Promise((resolve, reject) => {
-      const url    = URL.createObjectURL(file);
-      const audio  = new Audio();
-      audio.preload = 'auto';
-
-      audio.addEventListener('loadedmetadata', async () => {
-        try {
-          const duration  = audio.duration;
-          const sampleRate = 44100;
-          const numCh     = 2;
-          const totalSamples = Math.ceil(duration * sampleRate);
-
-          // OfflineAudioContext renders the full audio to a buffer
-          const offline = new OfflineAudioContext(numCh, totalSamples, sampleRate);
-          const source  = offline.createMediaElementSource(audio);
-          source.connect(offline.destination);
-
-          // Seek to start and play into the offline context
-          audio.currentTime = 0;
-          const rendered = await offline.startRendering();
-          URL.revokeObjectURL(url);
-          resolve(rendered);
-        } catch (err) {
-          URL.revokeObjectURL(url);
-          reject(err);
-        }
-      });
-
-      audio.addEventListener('error', () => {
-        URL.revokeObjectURL(url);
-        reject(new Error('Browser could not load this audio file.'));
-      });
-
-      audio.src = url;
-      audio.load();
-    });
-  }
-
-  // ── Primary decode: try decodeAudioData, fall back to audio element ──────
-  async function decodeAudio(file) {
-    // Method 1: standard decodeAudioData (fast, works for most files)
-    try {
-      const buf      = await file.arrayBuffer();
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      return await audioCtx.decodeAudioData(buf);
-    } catch (_) {}
-
-    // Method 2: route through native <audio> element (works for all MP3s)
-    showStatus('Using fallback decoder…');
-    return await decodeWithAudioElement(file);
-  }
-
-  // ── Worker — runs WAV encoding off the main thread ───────────────────────
+  // ─── Worker: pure byte-level MP3 splitter (no decoding) ──────────────────
+  // Splits by seeking through the compressed file using duration metadata
+  // from the Audio element — no PCM decode, no librosa, no server needed.
+  // Output: one Blob URL per segment (same format as input).
   const WORKER_CODE = `
-    function bufferToWav(channels, sr, len) {
-      const numCh = channels.length;
-      const ab = new ArrayBuffer(44 + len * numCh * 2);
-      const view = new DataView(ab);
-      const ws = (off, str) => { for (let i = 0; i < str.length; i++) view.setUint8(off+i, str.charCodeAt(i)); };
-      ws(0,'RIFF'); view.setUint32(4, 36+len*numCh*2, true);
-      ws(8,'WAVE'); ws(12,'fmt ');
-      view.setUint32(16,16,true); view.setUint16(20,1,true);
-      view.setUint16(22,numCh,true); view.setUint32(24,sr,true);
-      view.setUint32(28,sr*numCh*2,true); view.setUint16(32,numCh*2,true);
-      view.setUint16(34,16,true); ws(36,'data');
-      view.setUint32(40,len*numCh*2,true);
-      let off = 44;
-      for (let i = 0; i < len; i++) {
-        for (let ch = 0; ch < numCh; ch++) {
-          const s = Math.max(-1, Math.min(1, channels[ch][i]));
-          view.setInt16(off, s < 0 ? s*0x8000 : s*0x7FFF, true);
-          off += 2;
-        }
-      }
-      return ab;
-    }
+    self.onmessage = async function(e) {
+      const { fileBuffer, segSecs, mimeType, totalDuration } = e.data;
 
-    self.onmessage = function(e) {
-      const { channelData, sampleRate, segSecs, numCh, totalSamples } = e.data;
-      const segLen  = Math.floor(segSecs * sampleRate);
-      const numSegs = Math.ceil(totalSamples / segLen);
+      const numSegs = Math.ceil(totalDuration / segSecs);
+      const totalBytes = fileBuffer.byteLength;
       const results = [];
 
+      // Slice the raw bytes proportionally based on duration.
+      // This is instant for MP3/M4A/WAV since we're just copying bytes.
       for (let i = 0; i < numSegs; i++) {
-        const start  = i * segLen;
-        const end    = Math.min(start + segLen, totalSamples);
-        const len    = end - start;
-        const slices = channelData.map(ch => ch.slice(start, end));
-        const wav    = bufferToWav(slices, sampleRate, len);
-        const blob   = new Blob([wav], { type: 'audio/wav' });
-        const url    = URL.createObjectURL(blob);
+        const startFrac = (i * segSecs) / totalDuration;
+        const endFrac   = Math.min(((i + 1) * segSecs) / totalDuration, 1.0);
+
+        const startByte = Math.floor(startFrac * totalBytes);
+        const endByte   = Math.floor(endFrac   * totalBytes);
+
+        const slice = fileBuffer.slice(startByte, endByte);
+        const blob  = new Blob([slice], { type: mimeType });
+        const url   = URL.createObjectURL(blob);
+        const ext   = mimeType.split('/')[1].replace('mpeg','mp3').replace('x-m4a','m4a');
+
         results.push({
-          label:    'Segment ' + (i+1),
-          filename: 'segment_' + String(i).padStart(3,'0') + '.wav',
+          label:    'Segment ' + (i + 1),
+          filename: 'segment_' + String(i + 1).padStart(3, '0') + '.' + ext,
           startSec: i * segSecs,
-          endSec:   Math.min((i+1) * segSecs, totalSamples / sampleRate),
+          endSec:   Math.min((i + 1) * segSecs, totalDuration),
           url,
         });
-        self.postMessage({ type: 'progress', pct: Math.round(((i+1)/numSegs)*100) });
+
+        self.postMessage({ type: 'progress', pct: Math.round(((i + 1) / numSegs) * 100) });
       }
+
       self.postMessage({ type: 'done', results });
     };
   `;
 
-  // ── Process button ────────────────────────────────────────────────────────
+  // ─── Get duration without decoding ───────────────────────────────────────
+  function getAudioDuration(file) {
+    return new Promise((resolve, reject) => {
+      const url   = URL.createObjectURL(file);
+      const audio = new Audio();
+      audio.addEventListener('loadedmetadata', () => {
+        URL.revokeObjectURL(url);
+        if (isFinite(audio.duration) && audio.duration > 0) {
+          resolve(audio.duration);
+        } else {
+          reject(new Error('Could not read audio duration. Try a different file format.'));
+        }
+      });
+      audio.addEventListener('error', () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Browser could not read this audio file.'));
+      });
+      audio.src = url;
+    });
+  }
+
+  // ─── Process ──────────────────────────────────────────────────────────────
   processBtn.addEventListener('click', async () => {
     if (!state.file) { showStatus('Please upload an audio file first.', 'error'); return; }
 
     setProcessBtn('loading');
-    showStatus('Decoding audio…');
+    showStatus('Reading audio duration…');
     setProgress(5);
     state.segments = [];
 
     try {
-      const decoded      = await decodeAudio(state.file);
-      const sr           = decoded.sampleRate;
-      const numCh        = decoded.numberOfChannels;
-      const totalSamples = decoded.length;
-      const segSecs      = (parseInt(minutesInput.value) || 5) * 60;
+      // Step 1: get duration (fast — no decoding)
+      const totalDuration = await getAudioDuration(state.file);
+      const segSecs = (parseInt(minutesInput.value) || 5) * 60;
 
-      showStatus('Splitting in background…');
-      setProgress(30);
+      showStatus('Splitting…');
+      setProgress(15);
 
-      const channelData  = [];
-      const transferList = [];
-      for (let ch = 0; ch < numCh; ch++) {
-        const copy = new Float32Array(decoded.getChannelData(ch));
-        channelData.push(copy);
-        transferList.push(copy.buffer);
-      }
+      // Step 2: read raw bytes once
+      const fileBuffer = await state.file.arrayBuffer();
+      setProgress(25);
 
+      // Step 3: spin up worker, pass transferable buffer (zero-copy)
       const workerBlob = new Blob([WORKER_CODE], { type: 'application/javascript' });
       const worker     = new Worker(URL.createObjectURL(workerBlob));
       state.worker     = worker;
 
-      worker.postMessage({ channelData, sampleRate: sr, segSecs, numCh, totalSamples }, transferList);
+      worker.postMessage(
+        { fileBuffer, segSecs, mimeType: state.file.type, totalDuration },
+        [fileBuffer]  // transfer ownership — avoids copying 192MB
+      );
 
-      worker.onmessage = (ev) => {
+      worker.onmessage = ev => {
         if (ev.data.type === 'progress') {
-          setProgress(30 + Math.round(ev.data.pct * 0.7));
-          showStatus(`Encoding segments… ${ev.data.pct}%`);
+          setProgress(25 + Math.round(ev.data.pct * 0.75));
+          showStatus(`Slicing segments… ${ev.data.pct}%`);
         } else if (ev.data.type === 'done') {
           worker.terminate(); state.worker = null;
           state.segments = ev.data.results;
@@ -393,7 +347,7 @@
         }
       };
 
-      worker.onerror = (err) => {
+      worker.onerror = err => {
         worker.terminate(); state.worker = null;
         setProcessBtn('idle'); hideProgress();
         showStatus('Error: ' + err.message, 'error');
@@ -405,6 +359,7 @@
     }
   });
 
+  // ─── Render segments ──────────────────────────────────────────────────────
   function renderSegments(segments) {
     segmentsContainer.innerHTML = '';
     segments.forEach(seg => {
@@ -419,18 +374,22 @@
     segmentsList.classList.add('show');
   }
 
+  // ─── Download all ─────────────────────────────────────────────────────────
   downloadBtn.addEventListener('click', () => {
     if (!state.segments.length) return;
     state.segments.forEach((seg, i) => {
       setTimeout(() => {
         const a = document.createElement('a');
         a.href = seg.url; a.download = seg.filename; a.click();
-      }, i * 300);
+      }, i * 200);
     });
   });
 
+  // ─── Refresh ──────────────────────────────────────────────────────────────
   refreshBtn.addEventListener('click', () => {
     if (state.worker) { state.worker.terminate(); state.worker = null; }
+    // Revoke blob URLs to free memory
+    state.segments.forEach(s => URL.revokeObjectURL(s.url));
     state.file = null; state.segments = [];
     fileInput.value = '';
     fileInfo.classList.remove('show');
