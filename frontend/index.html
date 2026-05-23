@@ -7,74 +7,73 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Syne:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --sand: #d6ac80; --crimson: #940000; --espresso: #5a4230;
-      --sand-light: #f0dfc4; --sand-xlight: #faf4ec;
-      --crimson-dark: #6b0000; --espresso-light: #8a6347;
+      --sand:#d6ac80;--crimson:#940000;--espresso:#5a4230;
+      --sand-light:#f0dfc4;--sand-xlight:#faf4ec;
+      --crimson-dark:#6b0000;--espresso-light:#8a6347;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Syne', sans-serif; background: #f2ece3; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
-    .shell { background: var(--sand-xlight); border-radius: 24px; padding: 2.5rem 2.5rem 2rem; width: 100%; max-width: 600px; border: 1.5px solid var(--sand); }
-    .header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 2rem; }
-    .header-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: var(--espresso); }
-    .header-badge { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px; color: var(--crimson); background: #f9e5e5; padding: 3px 9px; border-radius: 20px; border: 1px solid #f0c0c0; }
-    .drop-zone { background: #fff; border: 2px dashed var(--sand); border-radius: 16px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden; }
-    .drop-zone:hover, .drop-zone.drag-over { border-color: var(--crimson); background: #fff8f5; }
-    .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-    .drop-icon { width: 52px; height: 52px; background: var(--sand-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
-    .drop-icon svg { width: 26px; height: 26px; stroke: var(--espresso); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-    .drop-title { font-size: 15px; font-weight: 600; color: var(--espresso); margin-bottom: 5px; }
-    .drop-sub { font-size: 12px; color: var(--espresso-light); }
-    .drop-sub span { color: var(--crimson); font-weight: 500; }
-    .file-info { display: none; align-items: center; gap: 12px; background: var(--sand-light); border-radius: 10px; padding: 10px 14px; margin-top: 12px; }
-    .file-info.show { display: flex; }
-    .file-info-icon { width: 34px; height: 34px; background: var(--espresso); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .file-info-icon svg { width: 18px; height: 18px; stroke: var(--sand-light); fill: none; stroke-width: 1.8; stroke-linecap: round; }
-    .file-name { font-size: 13px; font-weight: 500; color: var(--espresso); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .file-size { font-size: 11px; color: var(--espresso-light); white-space: nowrap; }
-    .waveform-row { margin: 1.2rem 0 0; display: none; }
-    .waveform-row.show { display: block; }
-    .waveform-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--espresso-light); margin-bottom: 8px; }
-    .waveform { height: 40px; display: flex; align-items: center; gap: 3px; }
-    .waveform-bar { flex: 1; background: var(--sand); border-radius: 2px; animation: wave 1.2s ease-in-out infinite; }
-    @keyframes wave { 0%, 100% { opacity: 0.4; transform: scaleY(0.5); } 50% { opacity: 1; transform: scaleY(1); } }
-    .divider { height: 1px; background: var(--sand); opacity: 0.4; margin: 1.5rem 0; }
-    .options-row { display: flex; align-items: center; gap: 16px; margin-bottom: 1.2rem; flex-wrap: wrap; }
-    .minutes-row { display: flex; align-items: center; gap: 10px; flex: 1; }
-    .minutes-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--espresso-light); white-space: nowrap; }
-    .minutes-input { width: 70px; padding: 7px 10px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 500; color: var(--espresso); background: #fff; border: 1.5px solid var(--sand); border-radius: 8px; outline: none; transition: border-color 0.15s; }
-    .minutes-input:focus { border-color: var(--crimson); }
-    .minutes-unit { font-size: 12px; color: var(--espresso-light); }
-    .seg-bar { flex: 1; height: 6px; background: var(--sand-light); border-radius: 3px; overflow: hidden; min-width: 40px; }
-    .seg-fill { height: 100%; background: linear-gradient(90deg, var(--espresso), var(--crimson)); border-radius: 3px; width: 0%; transition: width 0.4s ease; }
-    .btn-row { display: flex; gap: 10px; }
-    .btn { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 10px; padding: 10px 20px; transition: all 0.15s ease; border: none; display: flex; align-items: center; gap: 7px; }
-    .btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .btn-primary { background: var(--crimson); color: #fff; flex: 1; justify-content: center; }
-    .btn-primary:hover { background: var(--crimson-dark); transform: translateY(-1px); }
-    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-    .btn-secondary { background: var(--sand-light); color: var(--espresso); border: 1.5px solid var(--sand); }
-    .btn-secondary:hover { background: var(--sand); color: #fff; }
-    .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-ghost { background: transparent; color: var(--espresso-light); border: 1.5px solid var(--sand); width: 100%; justify-content: center; margin-top: 10px; font-size: 12px; }
-    .btn-ghost:hover { color: var(--espresso); border-color: var(--espresso); }
-    .status-bar { display: none; align-items: center; gap: 8px; border-radius: 8px; padding: 8px 12px; margin-top: 10px; font-size: 12px; font-weight: 500; }
-    .status-bar.show { display: flex; }
-    .status-bar.loading { background: #fff8f5; border: 1px solid #f0c0c0; color: var(--crimson); }
-    .status-bar.success { background: #f0faf5; border: 1px solid #9fd4b8; color: #2a6b4a; }
-    .status-bar.error   { background: #fff0f0; border: 1px solid #f0b0b0; color: #8b0000; }
-    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; animation: pulse 1s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-    .progress-wrap { display: none; height: 6px; background: var(--sand-light); border-radius: 3px; overflow: hidden; margin-top: 10px; }
-    .progress-wrap.show { display: block; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--espresso), var(--crimson)); border-radius: 3px; width: 0%; transition: width 0.3s ease; }
-    .segments-list { display: none; margin-top: 12px; }
-    .segments-list.show { display: block; }
-    .segments-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--espresso-light); margin-bottom: 8px; }
-    .segment-item { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid var(--sand); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; font-size: 12px; color: var(--espresso); gap: 8px; }
-    .seg-range { color: var(--espresso-light); white-space: nowrap; }
-    .segment-dl { font-size: 11px; color: var(--crimson); font-weight: 600; cursor: pointer; text-decoration: underline; white-space: nowrap; flex-shrink: 0; }
-    .segment-dl:hover { color: var(--crimson-dark); }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Syne',sans-serif;background:#f2ece3;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem}
+    .shell{background:var(--sand-xlight);border-radius:24px;padding:2.5rem 2.5rem 2rem;width:100%;max-width:600px;border:1.5px solid var(--sand)}
+    .header{display:flex;align-items:baseline;gap:10px;margin-bottom:2rem}
+    .header-title{font-family:'DM Serif Display',serif;font-size:24px;color:var(--espresso)}
+    .header-badge{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--crimson);background:#f9e5e5;padding:3px 9px;border-radius:20px;border:1px solid #f0c0c0}
+    .drop-zone{background:#fff;border:2px dashed var(--sand);border-radius:16px;padding:2.5rem 1.5rem;text-align:center;cursor:pointer;transition:all .2s ease;position:relative;overflow:hidden}
+    .drop-zone:hover,.drop-zone.drag-over{border-color:var(--crimson);background:#fff8f5}
+    .drop-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+    .drop-icon{width:52px;height:52px;background:var(--sand-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+    .drop-icon svg{width:26px;height:26px;stroke:var(--espresso);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .drop-title{font-size:15px;font-weight:600;color:var(--espresso);margin-bottom:5px}
+    .drop-sub{font-size:12px;color:var(--espresso-light)}
+    .drop-sub span{color:var(--crimson);font-weight:500}
+    .file-info{display:none;align-items:center;gap:12px;background:var(--sand-light);border-radius:10px;padding:10px 14px;margin-top:12px}
+    .file-info.show{display:flex}
+    .file-info-icon{width:34px;height:34px;background:var(--espresso);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .file-info-icon svg{width:18px;height:18px;stroke:var(--sand-light);fill:none;stroke-width:1.8;stroke-linecap:round}
+    .file-name{font-size:13px;font-weight:500;color:var(--espresso);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .file-size{font-size:11px;color:var(--espresso-light);white-space:nowrap}
+    .waveform-row{margin:1.2rem 0 0;display:none}
+    .waveform-row.show{display:block}
+    .waveform-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--espresso-light);margin-bottom:8px}
+    .waveform{height:40px;display:flex;align-items:center;gap:3px}
+    .waveform-bar{flex:1;background:var(--sand);border-radius:2px;animation:wave 1.2s ease-in-out infinite}
+    @keyframes wave{0%,100%{opacity:.4;transform:scaleY(.5)}50%{opacity:1;transform:scaleY(1)}}
+    .divider{height:1px;background:var(--sand);opacity:.4;margin:1.5rem 0}
+    .minutes-row{display:flex;align-items:center;gap:10px;margin-bottom:1.2rem}
+    .minutes-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--espresso-light);white-space:nowrap}
+    .minutes-input{width:70px;padding:7px 10px;font-family:'Syne',sans-serif;font-size:13px;font-weight:500;color:var(--espresso);background:#fff;border:1.5px solid var(--sand);border-radius:8px;outline:none;transition:border-color .15s}
+    .minutes-input:focus{border-color:var(--crimson)}
+    .minutes-unit{font-size:12px;color:var(--espresso-light)}
+    .seg-bar{flex:1;height:6px;background:var(--sand-light);border-radius:3px;overflow:hidden;min-width:40px}
+    .seg-fill{height:100%;background:linear-gradient(90deg,var(--espresso),var(--crimson));border-radius:3px;width:0%;transition:width .4s ease}
+    .btn-row{display:flex;gap:10px}
+    .btn{font-family:'Syne',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border-radius:10px;padding:10px 20px;transition:all .15s ease;border:none;display:flex;align-items:center;gap:7px}
+    .btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .btn-primary{background:var(--crimson);color:#fff;flex:1;justify-content:center}
+    .btn-primary:hover{background:var(--crimson-dark);transform:translateY(-1px)}
+    .btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none}
+    .btn-secondary{background:var(--sand-light);color:var(--espresso);border:1.5px solid var(--sand)}
+    .btn-secondary:hover{background:var(--sand);color:#fff}
+    .btn-secondary:disabled{opacity:.4;cursor:not-allowed}
+    .btn-ghost{background:transparent;color:var(--espresso-light);border:1.5px solid var(--sand);width:100%;justify-content:center;margin-top:10px;font-size:12px}
+    .btn-ghost:hover{color:var(--espresso);border-color:var(--espresso)}
+    .status-bar{display:none;align-items:center;gap:8px;border-radius:8px;padding:8px 12px;margin-top:10px;font-size:12px;font-weight:500}
+    .status-bar.show{display:flex}
+    .status-bar.loading{background:#fff8f5;border:1px solid #f0c0c0;color:var(--crimson)}
+    .status-bar.success{background:#f0faf5;border:1px solid #9fd4b8;color:#2a6b4a}
+    .status-bar.error{background:#fff0f0;border:1px solid #f0b0b0;color:#8b0000}
+    .status-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;animation:pulse 1s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    .progress-wrap{display:none;height:6px;background:var(--sand-light);border-radius:3px;overflow:hidden;margin-top:10px}
+    .progress-wrap.show{display:block}
+    .progress-fill{height:100%;background:linear-gradient(90deg,var(--espresso),var(--crimson));border-radius:3px;width:0%;transition:width .3s ease}
+    .segments-list{display:none;margin-top:12px}
+    .segments-list.show{display:block}
+    .segments-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--espresso-light);margin-bottom:8px}
+    .segment-item{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid var(--sand);border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:12px;color:var(--espresso);gap:8px}
+    .seg-range{color:var(--espresso-light);white-space:nowrap}
+    .segment-dl{font-size:11px;color:var(--crimson);font-weight:600;cursor:pointer;text-decoration:underline;white-space:nowrap;flex-shrink:0}
+    .segment-dl:hover{color:var(--crimson-dark)}
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
 <body>
@@ -97,7 +96,7 @@
     <div class="file-info-icon">
       <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
     </div>
-    <div style="flex:1;overflow:hidden;">
+    <div style="flex:1;overflow:hidden">
       <p class="file-name" id="fileName">—</p>
       <p class="file-size" id="fileSize">—</p>
     </div>
@@ -110,13 +109,11 @@
 
   <div class="divider"></div>
 
-  <div class="options-row">
-    <div class="minutes-row">
-      <span class="minutes-label">Segment every</span>
-      <input type="number" class="minutes-input" id="minutesInput" value="5" min="1" max="120" />
-      <span class="minutes-unit">min</span>
-      <div class="seg-bar"><div class="seg-fill" id="segFill"></div></div>
-    </div>
+  <div class="minutes-row">
+    <span class="minutes-label">Segment every</span>
+    <input type="number" class="minutes-input" id="minutesInput" value="5" min="1" max="120" />
+    <span class="minutes-unit">min</span>
+    <div class="seg-bar"><div class="seg-fill" id="segFill"></div></div>
   </div>
 
   <div class="btn-row">
@@ -130,9 +127,7 @@
     </button>
   </div>
 
-  <div class="progress-wrap" id="progressWrap">
-    <div class="progress-fill" id="progressFill"></div>
-  </div>
+  <div class="progress-wrap" id="progressWrap"><div class="progress-fill" id="progressFill"></div></div>
 
   <div class="status-bar" id="statusBar">
     <div class="status-dot"></div>
@@ -153,233 +148,358 @@
 </div>
 
 <script>
-  const state = { file: null, segments: [], worker: null };
+const state = { file: null, segments: [], worker: null };
+const $ = id => document.getElementById(id);
+const dropZone=$('dropZone'),fileInput=$('fileInput'),fileInfo=$('fileInfo'),
+      fileName=$('fileName'),fileSize=$('fileSize'),waveformRow=$('waveformRow'),
+      waveform=$('waveform'),minutesInput=$('minutesInput'),segFill=$('segFill'),
+      processBtn=$('processBtn'),downloadBtn=$('downloadBtn'),refreshBtn=$('refreshBtn'),
+      statusBar=$('statusBar'),statusText=$('statusText'),dropTitle=$('dropTitle'),
+      segmentsList=$('segmentsList'),segmentsContainer=$('segmentsContainer'),
+      progressWrap=$('progressWrap'),progressFill=$('progressFill');
 
-  const $ = id => document.getElementById(id);
-  const dropZone = $('dropZone'), fileInput = $('fileInput'),
-        fileInfo = $('fileInfo'), fileName = $('fileName'), fileSize = $('fileSize'),
-        waveformRow = $('waveformRow'), waveform = $('waveform'),
-        minutesInput = $('minutesInput'), segFill = $('segFill'),
-        processBtn = $('processBtn'), downloadBtn = $('downloadBtn'),
-        refreshBtn = $('refreshBtn'), statusBar = $('statusBar'),
-        statusText = $('statusText'), dropTitle = $('dropTitle'),
-        segmentsList = $('segmentsList'), segmentsContainer = $('segmentsContainer'),
-        progressWrap = $('progressWrap'), progressFill = $('progressFill');
+const fmt    = b => b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB';
+const fmtSec = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 
-  const fmt    = b => b < 1048576 ? (b/1024).toFixed(1)+' KB' : (b/1048576).toFixed(1)+' MB';
-  const fmtSec = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+function showStatus(msg,type='loading'){statusBar.className=`status-bar show ${type}`;statusText.textContent=msg;}
+function hideStatus(){statusBar.className='status-bar';}
+function setProgress(pct){progressWrap.classList.add('show');progressFill.style.width=Math.min(pct,100)+'%';}
+function hideProgress(){progressWrap.classList.remove('show');progressFill.style.width='0%';}
+function setProcessBtn(s){
+  const spin=`<svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;animation:spin 1s linear infinite;display:inline-block"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></svg>`;
+  processBtn.innerHTML={idle:`<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Process Audio`,loading:`${spin} Processing…`,done:`<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Done`}[s];
+  processBtn.disabled=s==='loading';
+}
+function buildWaveform(){
+  waveform.innerHTML='';
+  for(let i=0;i<48;i++){const b=document.createElement('div');b.className='waveform-bar';b.style.cssText=`height:${10+Math.random()*30}px;animation-delay:${(i*0.025).toFixed(3)}s`;waveform.appendChild(b);}
+}
+function updateSegBar(){segFill.style.width=Math.round((Math.min(Math.max(parseInt(minutesInput.value)||1,1),120)/120)*100)+'%';}
+minutesInput.addEventListener('input',updateSegBar);
+updateSegBar();
 
-  function showStatus(msg, type='loading') { statusBar.className=`status-bar show ${type}`; statusText.textContent=msg; }
-  function hideStatus() { statusBar.className='status-bar'; }
-  function setProgress(pct) { progressWrap.classList.add('show'); progressFill.style.width=Math.min(pct,100)+'%'; }
-  function hideProgress() { progressWrap.classList.remove('show'); progressFill.style.width='0%'; }
+function handleFile(file){
+  if(!file||!file.type.startsWith('audio/')){showStatus('Please upload a valid audio file.','error');return;}
+  state.file=file;state.segments=[];
+  fileName.textContent=file.name;fileSize.textContent=fmt(file.size);
+  fileInfo.classList.add('show');buildWaveform();waveformRow.classList.add('show');
+  dropTitle.textContent='File loaded';
+  segmentsList.classList.remove('show');segmentsContainer.innerHTML='';
+  hideStatus();hideProgress();setProcessBtn('idle');downloadBtn.disabled=true;
+}
+fileInput.addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0]);});
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('drag-over');});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop',e=>{
+  e.preventDefault();dropZone.classList.remove('drag-over');
+  const f=e.dataTransfer.files[0];if(f){fileInput.files=e.dataTransfer.files;handleFile(f);}
+});
 
-  function setProcessBtn(s) {
-    const spin = `<svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;animation:spin 1s linear infinite;display:inline-block"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></svg>`;
-    processBtn.innerHTML = { idle:`<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Process Audio`, loading:`${spin} Processing…`, done:`<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Done` }[s];
-    processBtn.disabled = s === 'loading';
-  }
+// ── Worker: MP3-aware byte slicer + WAV fallback ──────────────────────────
+// Strategy:
+//   1. Get real duration from <audio> element (no decode needed).
+//   2. For MP3: scan frame sync bytes (0xFFE_) to find frame boundaries,
+//      then collect frames that fall within each time window.
+//      This produces valid MP3 files that every player can open.
+//   3. For everything else (WAV, M4A, FLAC, OGG): fall back to
+//      decodeAudioData → slice PCM → write WAV headers.
+//      WAV is always valid regardless of input format.
 
-  function buildWaveform() {
-    waveform.innerHTML = '';
-    for (let i=0;i<48;i++) {
-      const b = document.createElement('div');
-      b.className='waveform-bar';
-      b.style.cssText=`height:${10+Math.random()*30}px;animation-delay:${(i*0.025).toFixed(3)}s`;
-      waveform.appendChild(b);
+const WORKER_CODE = `
+
+// ── WAV encoder (fallback path) ────────────────────────────────────────────
+function encodeWav(channelData, sampleRate) {
+  const numCh=channelData.length, numSamples=channelData[0].length;
+  const byteCount=numSamples*numCh*2;
+  const buf=new ArrayBuffer(44+byteCount), v=new DataView(buf);
+  const str=(off,s)=>{for(let i=0;i<s.length;i++)v.setUint8(off+i,s.charCodeAt(i));};
+  str(0,'RIFF');v.setUint32(4,36+byteCount,true);str(8,'WAVE');str(12,'fmt ');
+  v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,numCh,true);
+  v.setUint32(24,sampleRate,true);v.setUint32(28,sampleRate*numCh*2,true);
+  v.setUint16(32,numCh*2,true);v.setUint16(34,16,true);
+  str(36,'data');v.setUint32(40,byteCount,true);
+  let off=44;
+  for(let i=0;i<numSamples;i++){
+    for(let ch=0;ch<numCh;ch++){
+      const s=Math.max(-1,Math.min(1,channelData[ch][i]));
+      v.setInt16(off,s<0?s*0x8000:s*0x7FFF,true);off+=2;
     }
   }
+  return buf;
+}
 
-  function updateSegBar() { segFill.style.width=Math.round((Math.min(Math.max(parseInt(minutesInput.value)||1,1),120)/120)*100)+'%'; }
-  minutesInput.addEventListener('input', updateSegBar);
-  updateSegBar();
+// ── MP3 frame scanner ──────────────────────────────────────────────────────
+// MP3 frame header: 0xFF 0xEx or 0xFF 0xFx (sync word)
+// Each frame contains a fixed number of samples (1152 for MPEG1 Layer3).
+// We scan for valid sync words, parse the frame size, and build a time index.
+function scanMp3Frames(bytes) {
+  const SAMPLES_PER_FRAME = 1152;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const frames = [];
+  let i = 0;
 
-  function handleFile(file) {
-    if (!file || !file.type.startsWith('audio/')) { showStatus('Please upload a valid audio file.','error'); return; }
-    state.file=file; state.segments=[];
-    fileName.textContent=file.name; fileSize.textContent=fmt(file.size);
-    fileInfo.classList.add('show'); buildWaveform(); waveformRow.classList.add('show');
-    dropTitle.textContent='File loaded';
-    segmentsList.classList.remove('show'); segmentsContainer.innerHTML='';
-    hideStatus(); hideProgress(); setProcessBtn('idle'); downloadBtn.disabled=true;
+  // Skip ID3v2 tag if present
+  if (bytes[0]===0x49&&bytes[1]===0x44&&bytes[2]===0x33) {
+    const id3size = ((bytes[6]&0x7f)<<21)|((bytes[7]&0x7f)<<14)|((bytes[8]&0x7f)<<7)|(bytes[9]&0x7f);
+    i = 10 + id3size;
   }
 
-  fileInput.addEventListener('change', e => { if(e.target.files[0]) handleFile(e.target.files[0]); });
-  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-  dropZone.addEventListener('drop', e => {
-    e.preventDefault(); dropZone.classList.remove('drag-over');
-    const f=e.dataTransfer.files[0]; if(f){fileInput.files=e.dataTransfer.files; handleFile(f);}
-  });
+  while (i < bytes.length - 4) {
+    // Look for sync word: 11 set bits
+    if (bytes[i] !== 0xFF || (bytes[i+1] & 0xE0) !== 0xE0) { i++; continue; }
 
-  // ── Worker: decode → slice PCM → encode each segment as WAV ──────────────
-  // Uses decodeAudioData (fast, browser-native) then writes proper WAV headers.
-  // WAV is lossless and needs zero extra libraries — every OS opens it natively.
-  const WORKER_CODE = `
-    function encodeWav(channelData, sampleRate) {
-      const numCh      = channelData.length;
-      const numSamples = channelData[0].length;
-      const byteCount  = numSamples * numCh * 2;          // 16-bit = 2 bytes/sample
-      const buf        = new ArrayBuffer(44 + byteCount);
-      const v          = new DataView(buf);
-      const str        = (off, s) => { for(let i=0;i<s.length;i++) v.setUint8(off+i, s.charCodeAt(i)); };
+    const h = view.getUint32(i, false);
+    const version    = (h >>> 19) & 0x3; // 3=MPEG1, 2=MPEG2, 0=MPEG2.5
+    const layer      = (h >>> 17) & 0x3; // 1=LayerIII
+    const bitrateIdx = (h >>> 12) & 0xF;
+    const srateIdx   = (h >>> 10) & 0x3;
+    const padding    = (h >>> 9)  & 0x1;
 
-      str(0,'RIFF'); v.setUint32(4, 36+byteCount, true);
-      str(8,'WAVE'); str(12,'fmt ');
-      v.setUint32(16,16,true);           // chunk size
-      v.setUint16(20,1,true);            // PCM
-      v.setUint16(22,numCh,true);
-      v.setUint32(24,sampleRate,true);
-      v.setUint32(28,sampleRate*numCh*2,true);
-      v.setUint16(32,numCh*2,true);
-      v.setUint16(34,16,true);           // bits per sample
-      str(36,'data'); v.setUint32(40,byteCount,true);
+    if (layer !== 1 || bitrateIdx === 0 || bitrateIdx === 15 || srateIdx === 3) { i++; continue; }
 
-      let off = 44;
-      for (let i=0; i<numSamples; i++) {
-        for (let ch=0; ch<numCh; ch++) {
-          const s = Math.max(-1, Math.min(1, channelData[ch][i]));
-          v.setInt16(off, s < 0 ? s*0x8000 : s*0x7FFF, true);
-          off += 2;
-        }
-      }
-      return buf;
+    const BITRATES_V1 = [0,32,40,48,56,64,80,96,112,128,160,192,224,256,320,0];
+    const BITRATES_V2 = [0,8,16,24,32,40,48,56,64,80,96,112,128,144,160,0];
+    const SRATES      = [[44100,48000,32000],[22050,24000,16000],[11025,12000,8000]];
+    const vIdx        = version===3?0:version===2?1:2;
+
+    const bitrate  = (version===3?BITRATES_V1:BITRATES_V2)[bitrateIdx] * 1000;
+    const srate    = SRATES[vIdx][srateIdx];
+    if (!bitrate || !srate) { i++; continue; }
+
+    const frameSize = Math.floor(144 * bitrate / srate) + padding;
+    if (frameSize < 24 || i + frameSize > bytes.length) { i++; continue; }
+
+    frames.push({ offset: i, size: frameSize, srate });
+    i += frameSize;
+  }
+  return frames;
+}
+
+// ── MP3 path ───────────────────────────────────────────────────────────────
+function splitMp3(bytes, segSecs, totalDuration, mimeType) {
+  const frames = scanMp3Frames(bytes);
+  if (frames.length < 2) return null; // not enough frames, fall back
+
+  const srate           = frames[0].srate;
+  const SAMPLES_PER_FRAME = 1152;
+  const segFrames       = Math.ceil(segSecs * srate / SAMPLES_PER_FRAME);
+  const numSegs         = Math.ceil(frames.length / segFrames);
+  const results         = [];
+
+  for (let s=0; s<numSegs; s++) {
+    const startFrame = s * segFrames;
+    const endFrame   = Math.min(startFrame + segFrames, frames.length);
+    let totalBytes   = 0;
+    for (let f=startFrame; f<endFrame; f++) totalBytes += frames[f].size;
+
+    const out    = new Uint8Array(totalBytes);
+    let   cursor = 0;
+    for (let f=startFrame; f<endFrame; f++) {
+      out.set(bytes.subarray(frames[f].offset, frames[f].offset + frames[f].size), cursor);
+      cursor += frames[f].size;
     }
 
-    self.onmessage = function(e) {
-      const { channelData, sampleRate, segSecs, totalDuration } = e.data;
-      const numCh      = channelData.length;
-      const totalSamps = channelData[0].length;
-      const segSamps   = Math.floor(segSecs * sampleRate);
-      const numSegs    = Math.ceil(totalSamps / segSamps);
-      const results    = [];
+    const startSec = (startFrame * SAMPLES_PER_FRAME) / srate;
+    const endSec   = Math.min((endFrame * SAMPLES_PER_FRAME) / srate, totalDuration);
+    const blob     = new Blob([out], { type: 'audio/mpeg' });
+    const url      = URL.createObjectURL(blob);
 
-      for (let i=0; i<numSegs; i++) {
-        const start  = i * segSamps;
-        const end    = Math.min(start + segSamps, totalSamps);
-        // Slice each channel
-        const sliced = channelData.map(ch => ch.slice(start, end));
-        const wav    = encodeWav(sliced, sampleRate);
-        const blob   = new Blob([wav], { type: 'audio/wav' });
-        const url    = URL.createObjectURL(blob);
-
-        results.push({
-          label:    'Segment ' + (i+1),
-          filename: 'segment_' + String(i+1).padStart(3,'0') + '.wav',
-          startSec: parseFloat((start / sampleRate).toFixed(2)),
-          endSec:   parseFloat((end   / sampleRate).toFixed(2)),
-          url,
-        });
-
-        self.postMessage({ type:'progress', pct: Math.round(((i+1)/numSegs)*100) });
-      }
-
-      self.postMessage({ type:'done', results });
-    };
-  `;
-
-  // ── Decode audio to PCM using the browser's native decoder ───────────────
-  // decodeAudioData is fast and supports MP3/M4A/WAV/FLAC natively.
-  // For very large files it runs off the main thread via OfflineAudioContext.
-  async function decodeAudio(file) {
-    const arrayBuf = await file.arrayBuffer();
-    const ctx      = new (window.AudioContext || window.webkitAudioContext)();
-    // decodeAudioData is fastest path — no fallback needed when called correctly
-    return new Promise((resolve, reject) => {
-      ctx.decodeAudioData(arrayBuf, resolve, reject);
+    results.push({
+      label:    'Segment ' + (s+1),
+      filename: 'segment_' + String(s+1).padStart(3,'0') + '.mp3',
+      startSec: parseFloat(startSec.toFixed(2)),
+      endSec:   parseFloat(endSec.toFixed(2)),
+      url,
     });
+    self.postMessage({ type:'progress', pct: Math.round(((s+1)/numSegs)*100) });
+  }
+  return results;
+}
+
+// ── WAV PCM path (fallback for non-MP3) ────────────────────────────────────
+function splitPcm(channelData, sampleRate, segSecs, totalDuration) {
+  const numCh      = channelData.length;
+  const totalSamps = channelData[0].length;
+  const segSamps   = Math.floor(segSecs * sampleRate);
+  const numSegs    = Math.ceil(totalSamps / segSamps);
+  const results    = [];
+
+  for (let i=0; i<numSegs; i++) {
+    const start  = i * segSamps;
+    const end    = Math.min(start + segSamps, totalSamps);
+    const sliced = channelData.map(ch => ch.slice(start, end));
+    const wav    = encodeWav(sliced, sampleRate);
+    const blob   = new Blob([wav], { type:'audio/wav' });
+    const url    = URL.createObjectURL(blob);
+    results.push({
+      label:    'Segment ' + (i+1),
+      filename: 'segment_' + String(i+1).padStart(3,'0') + '.wav',
+      startSec: parseFloat((start/sampleRate).toFixed(2)),
+      endSec:   parseFloat((end/sampleRate).toFixed(2)),
+      url,
+    });
+    self.postMessage({ type:'progress', pct: Math.round(((i+1)/numSegs)*100) });
+  }
+  return results;
+}
+
+self.onmessage = function(e) {
+  const { fileBuffer, mimeType, segSecs, totalDuration, channelData, sampleRate } = e.data;
+
+  // MP3 path: scan real frame boundaries
+  if (mimeType === 'audio/mpeg' || mimeType === 'audio/mp3') {
+    const bytes   = new Uint8Array(fileBuffer);
+    const results = splitMp3(bytes, segSecs, totalDuration, mimeType);
+    if (results) { self.postMessage({ type:'done', results }); return; }
+    // Fall through to PCM path if frame scan failed
   }
 
-  // ── Process button ────────────────────────────────────────────────────────
-  processBtn.addEventListener('click', async () => {
-    if (!state.file) { showStatus('Please upload an audio file first.','error'); return; }
+  // PCM path: channelData was decoded on the main thread and passed in
+  if (channelData && sampleRate) {
+    const results = splitPcm(channelData, sampleRate, segSecs, totalDuration);
+    self.postMessage({ type:'done', results });
+    return;
+  }
 
-    setProcessBtn('loading');
-    showStatus('Decoding audio…');
-    setProgress(5);
-    state.segments = [];
+  self.postMessage({ type:'error', message:'Could not process this audio format.' });
+};
+`;
 
-    try {
-      const decoded      = await decodeAudio(state.file);
-      const sr           = decoded.sampleRate;
-      const numCh        = decoded.numberOfChannels;
-      const totalSamples = decoded.length;
-      const segSecs      = (parseInt(minutesInput.value) || 5) * 60;
+// ── Get duration without decoding ─────────────────────────────────────────
+function getAudioDuration(file) {
+  return new Promise((resolve, reject) => {
+    const url=URL.createObjectURL(file), audio=new Audio();
+    audio.addEventListener('loadedmetadata', () => {
+      URL.revokeObjectURL(url);
+      isFinite(audio.duration)&&audio.duration>0 ? resolve(audio.duration) : reject(new Error('Could not read duration.'));
+    });
+    audio.addEventListener('error', () => { URL.revokeObjectURL(url); reject(new Error('Browser could not read this file.')); });
+    audio.src=url;
+  });
+}
 
-      showStatus('Encoding segments…');
-      setProgress(25);
+// ── Try decoding to PCM (needed for non-MP3 formats) ─────────────────────
+async function tryDecodeAudio(file) {
+  try {
+    const buf = await file.arrayBuffer();
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const decoded = await new Promise((res,rej) => ctx.decodeAudioData(buf.slice(0), res, rej));
+    const channelData=[], transferList=[];
+    for(let ch=0;ch<decoded.numberOfChannels;ch++){
+      const copy=new Float32Array(decoded.getChannelData(ch));
+      channelData.push(copy); transferList.push(copy.buffer);
+    }
+    return { channelData, sampleRate: decoded.sampleRate, transferList };
+  } catch(_) {
+    return null; // decode failed — only MP3 path will be tried
+  }
+}
 
-      // Copy channel data and transfer buffers to worker (zero-copy)
-      const channelData  = [];
-      const transferList = [];
-      for (let ch=0; ch<numCh; ch++) {
-        const copy = new Float32Array(decoded.getChannelData(ch));
-        channelData.push(copy);
-        transferList.push(copy.buffer);
-      }
+// ── Process button ────────────────────────────────────────────────────────
+processBtn.addEventListener('click', async () => {
+  if (!state.file) { showStatus('Please upload an audio file first.','error'); return; }
 
-      const worker = new Worker(URL.createObjectURL(new Blob([WORKER_CODE], { type:'application/javascript' })));
-      state.worker = worker;
+  setProcessBtn('loading');
+  setProgress(5);
+  state.segments=[];
 
-      worker.postMessage({ channelData, sampleRate:sr, segSecs, totalDuration:decoded.duration }, transferList);
+  try {
+    // Step 1: get duration (fast, no decode)
+    showStatus('Reading file…');
+    const totalDuration = await getAudioDuration(state.file);
+    const segSecs = (parseInt(minutesInput.value)||5)*60;
+    const isMp3   = state.file.type==='audio/mpeg'||state.file.type==='audio/mp3'||state.file.name.toLowerCase().endsWith('.mp3');
 
-      worker.onmessage = ev => {
-        if (ev.data.type === 'progress') {
-          setProgress(25 + Math.round(ev.data.pct * 0.75));
-          showStatus(`Encoding segments… ${ev.data.pct}%`);
-        } else if (ev.data.type === 'done') {
-          worker.terminate(); state.worker = null;
-          state.segments = ev.data.results;
-          setProcessBtn('done');
-          setProgress(100);
-          showStatus(`${state.segments.length} segment${state.segments.length!==1?'s':''} ready`, 'success');
-          renderSegments(state.segments);
-          downloadBtn.disabled = false;
-          setTimeout(hideProgress, 800);
-        }
+    setProgress(15);
+    let workerMsg, transferList=[];
+
+    if (isMp3) {
+      // MP3: pass raw bytes — worker will scan frame boundaries
+      showStatus('Scanning MP3 frames…');
+      const fileBuffer = await state.file.arrayBuffer();
+      setProgress(30);
+      workerMsg = { fileBuffer, mimeType: state.file.type||'audio/mpeg', segSecs, totalDuration };
+      transferList = [fileBuffer];
+    } else {
+      // Non-MP3: decode to PCM first, then slice
+      showStatus('Decoding audio…');
+      const decoded = await tryDecodeAudio(state.file);
+      if (!decoded) throw new Error('This audio format could not be decoded. Try converting to MP3 first.');
+      setProgress(40);
+      workerMsg = {
+        fileBuffer: new ArrayBuffer(0), // not used
+        mimeType: state.file.type,
+        segSecs, totalDuration,
+        channelData: decoded.channelData,
+        sampleRate: decoded.sampleRate,
       };
+      transferList = decoded.transferList;
+    }
 
-      worker.onerror = err => {
-        worker.terminate(); state.worker = null;
+    showStatus('Splitting…');
+    const worker = new Worker(URL.createObjectURL(new Blob([WORKER_CODE],{type:'application/javascript'})));
+    state.worker = worker;
+    worker.postMessage(workerMsg, transferList);
+
+    worker.onmessage = ev => {
+      if (ev.data.type==='progress') {
+        setProgress(40 + Math.round(ev.data.pct*0.6));
+        showStatus(`Splitting… ${ev.data.pct}%`);
+      } else if (ev.data.type==='done') {
+        worker.terminate(); state.worker=null;
+        state.segments=ev.data.results;
+        setProcessBtn('done'); setProgress(100);
+        showStatus(`${state.segments.length} segment${state.segments.length!==1?'s':''} ready`,'success');
+        renderSegments(state.segments);
+        downloadBtn.disabled=false;
+        setTimeout(hideProgress,800);
+      } else if (ev.data.type==='error') {
+        worker.terminate(); state.worker=null;
         setProcessBtn('idle'); hideProgress();
-        showStatus('Error: ' + err.message, 'error');
-      };
-
-    } catch(err) {
+        showStatus(ev.data.message,'error');
+      }
+    };
+    worker.onerror = err => {
+      worker.terminate(); state.worker=null;
       setProcessBtn('idle'); hideProgress();
-      showStatus('Could not decode audio: ' + err.message, 'error');
-    }
-  });
+      showStatus('Error: '+err.message,'error');
+    };
 
-  function renderSegments(segs) {
-    segmentsContainer.innerHTML = '';
-    segs.forEach(seg => {
-      const d = document.createElement('div');
-      d.className = 'segment-item';
-      d.innerHTML = `<span>${seg.label}</span><span class="seg-range">${fmtSec(seg.startSec)} – ${fmtSec(seg.endSec)}</span><a class="segment-dl" href="${seg.url}" download="${seg.filename}">Download</a>`;
-      segmentsContainer.appendChild(d);
-    });
-    segmentsList.classList.add('show');
+  } catch(err) {
+    setProcessBtn('idle'); hideProgress();
+    showStatus(err.message,'error');
   }
+});
 
-  downloadBtn.addEventListener('click', () => {
-    if (!state.segments.length) return;
-    state.segments.forEach((seg, i) => {
-      setTimeout(() => { const a=document.createElement('a'); a.href=seg.url; a.download=seg.filename; a.click(); }, i*200);
-    });
+function renderSegments(segs) {
+  segmentsContainer.innerHTML='';
+  segs.forEach(seg => {
+    const d=document.createElement('div');
+    d.className='segment-item';
+    d.innerHTML=`<span>${seg.label}</span><span class="seg-range">${fmtSec(seg.startSec)} – ${fmtSec(seg.endSec)}</span><a class="segment-dl" href="${seg.url}" download="${seg.filename}">Download</a>`;
+    segmentsContainer.appendChild(d);
   });
+  segmentsList.classList.add('show');
+}
 
-  refreshBtn.addEventListener('click', () => {
-    if (state.worker) { state.worker.terminate(); state.worker=null; }
-    state.segments.forEach(s => URL.revokeObjectURL(s.url));
-    state.file=null; state.segments=[];
-    fileInput.value='';
-    fileInfo.classList.remove('show'); waveformRow.classList.remove('show');
-    segmentsList.classList.remove('show'); segmentsContainer.innerHTML=''; waveform.innerHTML='';
-    hideStatus(); hideProgress();
-    dropTitle.textContent='Drop audio here';
-    minutesInput.value=5; updateSegBar(); setProcessBtn('idle'); downloadBtn.disabled=true;
+downloadBtn.addEventListener('click', () => {
+  if (!state.segments.length) return;
+  state.segments.forEach((seg,i) => {
+    setTimeout(() => { const a=document.createElement('a');a.href=seg.url;a.download=seg.filename;a.click(); }, i*200);
   });
+});
+
+refreshBtn.addEventListener('click', () => {
+  if(state.worker){state.worker.terminate();state.worker=null;}
+  state.segments.forEach(s=>URL.revokeObjectURL(s.url));
+  state.file=null;state.segments=[];
+  fileInput.value='';
+  fileInfo.classList.remove('show');waveformRow.classList.remove('show');
+  segmentsList.classList.remove('show');segmentsContainer.innerHTML='';waveform.innerHTML='';
+  hideStatus();hideProgress();
+  dropTitle.textContent='Drop audio here';
+  minutesInput.value=5;updateSegBar();setProcessBtn('idle');downloadBtn.disabled=true;
+});
 </script>
 </body>
 </html>
