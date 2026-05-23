@@ -301,15 +301,14 @@ function splitMp3(bytes, segSecs, totalDuration, mimeType) {
 
     const startSec = (startFrame * SAMPLES_PER_FRAME) / srate;
     const endSec   = Math.min((endFrame * SAMPLES_PER_FRAME) / srate, totalDuration);
-    const blob     = new Blob([out], { type: 'audio/mpeg' });
-    const url      = URL.createObjectURL(blob);
 
     results.push({
       label:    'Segment ' + (s+1),
       filename: 'segment_' + String(s+1).padStart(3,'0') + '.mp3',
       startSec: parseFloat(startSec.toFixed(2)),
       endSec:   parseFloat(endSec.toFixed(2)),
-      url,
+      mimeType: 'audio/mpeg',
+      buffer:   out.buffer,
     });
     self.postMessage({ type:'progress', pct: Math.round(((s+1)/numSegs)*100) });
   }
@@ -329,14 +328,13 @@ function splitPcm(channelData, sampleRate, segSecs, totalDuration) {
     const end    = Math.min(start + segSamps, totalSamps);
     const sliced = channelData.map(ch => ch.slice(start, end));
     const wav    = encodeWav(sliced, sampleRate);
-    const blob   = new Blob([wav], { type:'audio/wav' });
-    const url    = URL.createObjectURL(blob);
     results.push({
       label:    'Segment ' + (i+1),
       filename: 'segment_' + String(i+1).padStart(3,'0') + '.wav',
       startSec: parseFloat((start/sampleRate).toFixed(2)),
       endSec:   parseFloat((end/sampleRate).toFixed(2)),
-      url,
+      mimeType: 'audio/wav',
+      buffer:   wav,
     });
     self.postMessage({ type:'progress', pct: Math.round(((i+1)/numSegs)*100) });
   }
@@ -350,14 +348,19 @@ self.onmessage = function(e) {
   if (mimeType === 'audio/mpeg' || mimeType === 'audio/mp3') {
     const bytes   = new Uint8Array(fileBuffer);
     const results = splitMp3(bytes, segSecs, totalDuration, mimeType);
-    if (results) { self.postMessage({ type:'done', results }); return; }
+    if (results) {
+      const transferList = results.map(r => r.buffer);
+      self.postMessage({ type:'done', results }, transferList);
+      return;
+    }
     // Fall through to PCM path if frame scan failed
   }
 
   // PCM path: channelData was decoded on the main thread and passed in
   if (channelData && sampleRate) {
     const results = splitPcm(channelData, sampleRate, segSecs, totalDuration);
-    self.postMessage({ type:'done', results });
+    const transferList = results.map(r => r.buffer);
+    self.postMessage({ type:'done', results }, transferList);
     return;
   }
 
@@ -447,7 +450,11 @@ processBtn.addEventListener('click', async () => {
         showStatus(`Splitting… ${ev.data.pct}%`);
       } else if (ev.data.type==='done') {
         worker.terminate(); state.worker=null;
-        state.segments=ev.data.results;
+        // Create object URLs here on the main thread (workers can't use createObjectURL)
+        state.segments = ev.data.results.map(seg => ({
+          ...seg,
+          url: URL.createObjectURL(new Blob([seg.buffer], { type: seg.mimeType })),
+        }));
         setProcessBtn('done'); setProgress(100);
         showStatus(`${state.segments.length} segment${state.segments.length!==1?'s':''} ready`,'success');
         renderSegments(state.segments);
