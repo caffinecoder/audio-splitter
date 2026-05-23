@@ -1,10 +1,10 @@
 """
 Audio Segment Tool — FastAPI Backend
-- Job state persisted to disk (survives restarts)
+- Noise reduction is optional (skipped by default for speed)
+- Job state persisted to disk
 - Interrupted jobs auto-resume on startup
 """
 
-import os
 import uuid
 import shutil
 import zipfile
@@ -15,7 +15,6 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import librosa
 import soundfile as sf
-import noisereduce as nr
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -64,10 +63,7 @@ def load_job(job_id: str) -> dict | None:
 def save_job(job_id: str, data: dict):
     f = job_file(job_id)
     f.parent.mkdir(parents=True, exist_ok=True)
-    serializable = {
-        k: str(v) if isinstance(v, Path) else v
-        for k, v in data.items()
-    }
+    serializable = {k: str(v) if isinstance(v, Path) else v for k, v in data.items()}
     f.write_text(json.dumps(serializable))
 
 def update_job(job_id: str, **kwargs):
@@ -80,8 +76,9 @@ def update_job(job_id: str, **kwargs):
 class SegmentRequest(BaseModel):
     jobId: str
     segmentMinutes: int = 5
+    denoise: bool = False  # off by default — too slow on free tier
 
-# ─── Startup: resume any interrupted jobs ─────────────────────────────────────
+# ─── Startup: resume interrupted jobs ─────────────────────────────────────────
 
 @app.on_event("startup")
 async def resume_interrupted_jobs():
@@ -93,13 +90,17 @@ async def resume_interrupted_jobs():
         job_id = job_dir.name
         job = load_job(job_id)
         if job and job.get("status") == "processing":
-            seg_min = job.get("segmentMinutes", 5)
             update_job(job_id, progress=5, message="Resuming after server restart…")
-            executor.submit(_process_audio, job_id, seg_min)
+            executor.submit(
+                _process_audio,
+                job_id,
+                job.get("segmentMinutes", 5),
+                job.get("denoise", False),
+            )
 
 # ─── Blocking audio work ──────────────────────────────────────────────────────
 
-def _process_audio(job_id: str, segment_minutes: int):
+def _process_audio(job_id: str, segment_minutes: int, denoise: bool = False):
     job = load_job(job_id)
     if not job:
         return
@@ -115,16 +116,21 @@ def _process_audio(job_id: str, segment_minutes: int):
         update_job(job_id, progress=10)
         audio, sr = librosa.load(str(audio_path), sr=SAMPLE_RATE, mono=True)
 
-        # 2. Noise reduction
-        update_job(job_id, progress=25)
-        reduced = nr.reduce_noise(y=audio, sr=sr)
+        # 2. Noise reduction (optional — slow on free tier)
+        update_job(job_id, progress=20)
+        if denoise:
+            try:
+                import noisereduce as nr
+                audio = nr.reduce_noise(y=audio, sr=sr)
+            except Exception:
+                pass  # skip silently if it fails
 
         # 3. Split
         update_job(job_id, progress=40)
         seg_len      = sr * 60 * segment_minutes
         raw_segments = [
-            reduced[i: i + seg_len]
-            for i in range(0, len(reduced), seg_len)
+            audio[i: i + seg_len]
+            for i in range(0, len(audio), seg_len)
         ]
 
         # 4. Filter & save
@@ -203,6 +209,7 @@ async def upload_audio(audio: UploadFile = File(...)):
         "size":           len(content),
         "duration":       round(duration, 2),
         "segmentMinutes": 5,
+        "denoise":        False,
     })
 
     return {
@@ -222,9 +229,9 @@ async def start_segmentation(req: SegmentRequest):
         raise HTTPException(409, "Job is already processing.")
 
     seg_min = max(1, min(req.segmentMinutes, 120))
-    update_job(req.jobId, segmentMinutes=seg_min)
-    executor.submit(_process_audio, req.jobId, seg_min)
-    return {"jobId": req.jobId, "segmentMinutes": seg_min}
+    update_job(req.jobId, segmentMinutes=seg_min, denoise=req.denoise)
+    executor.submit(_process_audio, req.jobId, seg_min, req.denoise)
+    return {"jobId": req.jobId, "segmentMinutes": seg_min, "denoise": req.denoise}
 
 
 @app.get("/segment/{job_id}/status")
@@ -232,7 +239,6 @@ async def get_job_status(job_id: str):
     job = load_job(job_id)
     if not job:
         raise HTTPException(404, "Job not found.")
-
     response = {"status": job["status"], "progress": job["progress"]}
     if job["status"] == "done":
         response["segments"] = job["segments"]
@@ -248,11 +254,9 @@ async def download_all(job_id: str):
         raise HTTPException(404, "Job not found.")
     if job["status"] != "done":
         raise HTTPException(409, "Segments not ready yet.")
-
     zip_path = job.get("zip_path")
     if not zip_path or not Path(zip_path).exists():
         raise HTTPException(500, "Zip file missing.")
-
     return FileResponse(
         path=str(zip_path),
         media_type="application/zip",

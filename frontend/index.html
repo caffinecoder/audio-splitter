@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Syne:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --sand: #d6ac80; --crimson: #940000; --espresso: #5a4230; --ink: #040400;
+      --sand: #d6ac80; --crimson: #940000; --espresso: #5a4230;
       --sand-light: #f0dfc4; --sand-xlight: #faf4ec;
       --crimson-dark: #6b0000; --espresso-light: #8a6347;
     }
@@ -15,7 +15,7 @@
     body { font-family: 'Syne', sans-serif; background: #f2ece3; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
     .shell { background: var(--sand-xlight); border-radius: 24px; padding: 2.5rem 2.5rem 2rem; width: 100%; max-width: 600px; border: 1.5px solid var(--sand); }
     .header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 2rem; }
-    .header-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: var(--espresso); letter-spacing: -0.3px; }
+    .header-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: var(--espresso); }
     .header-badge { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px; color: var(--crimson); background: #f9e5e5; padding: 3px 9px; border-radius: 20px; border: 1px solid #f0c0c0; }
     .drop-zone { background: #fff; border: 2px dashed var(--sand); border-radius: 16px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden; }
     .drop-zone:hover, .drop-zone.drag-over { border-color: var(--crimson); background: #fff8f5; }
@@ -38,19 +38,28 @@
     .waveform-bar { flex: 1; background: var(--sand); border-radius: 2px; animation: wave 1.2s ease-in-out infinite; }
     @keyframes wave { 0%, 100% { opacity: 0.4; transform: scaleY(0.5); } 50% { opacity: 1; transform: scaleY(1); } }
     .divider { height: 1px; background: var(--sand); opacity: 0.4; margin: 1.5rem 0; }
-    .minutes-row { display: flex; align-items: center; gap: 10px; margin-bottom: 1.2rem; }
+    .options-row { display: flex; align-items: center; gap: 16px; margin-bottom: 1.2rem; flex-wrap: wrap; }
+    .minutes-row { display: flex; align-items: center; gap: 10px; flex: 1; }
     .minutes-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--espresso-light); white-space: nowrap; }
     .minutes-input { width: 70px; padding: 7px 10px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 500; color: var(--espresso); background: #fff; border: 1.5px solid var(--sand); border-radius: 8px; outline: none; transition: border-color 0.15s; }
     .minutes-input:focus { border-color: var(--crimson); }
     .minutes-unit { font-size: 12px; color: var(--espresso-light); }
-    .seg-bar { flex: 1; height: 6px; background: var(--sand-light); border-radius: 3px; overflow: hidden; }
+    .seg-bar { flex: 1; height: 6px; background: var(--sand-light); border-radius: 3px; overflow: hidden; min-width: 40px; }
     .seg-fill { height: 100%; background: linear-gradient(90deg, var(--espresso), var(--crimson)); border-radius: 3px; width: 0%; transition: width 0.4s ease; }
+    /* Toggle switch */
+    .toggle-wrap { display: flex; align-items: center; gap: 8px; cursor: pointer; white-space: nowrap; }
+    .toggle-wrap input { display: none; }
+    .toggle-track { width: 34px; height: 18px; background: var(--sand); border-radius: 9px; position: relative; transition: background 0.2s; flex-shrink: 0; }
+    .toggle-track::after { content: ''; position: absolute; width: 12px; height: 12px; background: #fff; border-radius: 50%; top: 3px; left: 3px; transition: left 0.2s; }
+    input:checked + .toggle-track { background: var(--espresso); }
+    input:checked + .toggle-track::after { left: 19px; }
+    .toggle-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--espresso-light); }
+    .toggle-note { font-size: 10px; color: var(--espresso-light); margin-top: 2px; }
     .btn-row { display: flex; gap: 10px; }
     .btn { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 10px; padding: 10px 20px; transition: all 0.15s ease; border: none; display: flex; align-items: center; gap: 7px; }
     .btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .btn-primary { background: var(--crimson); color: #fff; flex: 1; justify-content: center; }
     .btn-primary:hover { background: var(--crimson-dark); transform: translateY(-1px); }
-    .btn-primary:active { transform: scale(0.97); }
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
     .btn-secondary { background: var(--sand-light); color: var(--espresso); border: 1.5px solid var(--sand); }
     .btn-secondary:hover { background: var(--sand); color: #fff; }
@@ -71,9 +80,9 @@
     .segments-list { display: none; margin-top: 12px; }
     .segments-list.show { display: block; }
     .segments-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--espresso-light); margin-bottom: 8px; }
-    .segment-item { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid var(--sand); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; font-size: 12px; color: var(--espresso); }
-    .segment-item .seg-range { color: var(--espresso-light); }
-    .segment-dl { font-size: 11px; color: var(--crimson); font-weight: 600; cursor: pointer; text-decoration: underline; }
+    .segment-item { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid var(--sand); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; font-size: 12px; color: var(--espresso); gap: 8px; }
+    .seg-range { color: var(--espresso-light); white-space: nowrap; }
+    .segment-dl { font-size: 11px; color: var(--crimson); font-weight: 600; cursor: pointer; text-decoration: underline; white-space: nowrap; }
     .segment-dl:hover { color: var(--crimson-dark); }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
@@ -111,11 +120,21 @@
 
   <div class="divider"></div>
 
-  <div class="minutes-row">
-    <span class="minutes-label">Segment every</span>
-    <input type="number" class="minutes-input" id="minutesInput" value="5" min="1" max="60" />
-    <span class="minutes-unit">min</span>
-    <div class="seg-bar"><div class="seg-fill" id="segFill"></div></div>
+  <div class="options-row">
+    <div class="minutes-row">
+      <span class="minutes-label">Segment every</span>
+      <input type="number" class="minutes-input" id="minutesInput" value="5" min="1" max="60" />
+      <span class="minutes-unit">min</span>
+      <div class="seg-bar"><div class="seg-fill" id="segFill"></div></div>
+    </div>
+    <div>
+      <label class="toggle-wrap">
+        <input type="checkbox" id="denoiseToggle" />
+        <span class="toggle-track"></span>
+        <span class="toggle-label">Denoise</span>
+      </label>
+      <p class="toggle-note">slower on free tier</p>
+    </div>
   </div>
 
   <div class="btn-row">
@@ -152,11 +171,7 @@
 </div>
 
 <script>
-  // ── CONFIG ─────────────────────────────────────────────────────────────────
-  // Set to your Render backend URL. If frontend and backend are on the same
-  // domain, use "". Otherwise: "https://your-app.onrender.com"
   const API = "https://audio-segment-tool.onrender.com";
-  // ──────────────────────────────────────────────────────────────────────────
 
   let state = { jobId: null, segments: [], pollTimer: null };
 
@@ -169,6 +184,7 @@
   const waveformRow       = $('waveformRow');
   const waveform          = $('waveform');
   const minutesInput      = $('minutesInput');
+  const denoiseToggle     = $('denoiseToggle');
   const segFill           = $('segFill');
   const processBtn        = $('processBtn');
   const downloadBtn       = $('downloadBtn');
@@ -181,7 +197,6 @@
   const progressWrap      = $('progressWrap');
   const progressFill      = $('progressFill');
 
-  // ── UI helpers ─────────────────────────────────────────────────────────────
   function fmt(b) { return b < 1048576 ? (b/1024).toFixed(1)+' KB' : (b/1048576).toFixed(1)+' MB'; }
   function fmtSec(s) { return `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`; }
 
@@ -190,21 +205,14 @@
     statusText.textContent = msg;
   }
   function hideStatus() { statusBar.classList.remove('show'); }
-
-  function setProgress(pct) {
-    progressWrap.classList.add('show');
-    progressFill.style.width = Math.min(pct, 100) + '%';
-  }
-  function hideProgress() {
-    progressWrap.classList.remove('show');
-    progressFill.style.width = '0%';
-  }
+  function setProgress(pct) { progressWrap.classList.add('show'); progressFill.style.width = Math.min(pct,100)+'%'; }
+  function hideProgress() { progressWrap.classList.remove('show'); progressFill.style.width = '0%'; }
 
   function setProcessBtn(s) {
-    const spinSvg = `<svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;animation:spin 1s linear infinite;display:inline-block"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></svg>`;
+    const spin = `<svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;animation:spin 1s linear infinite;display:inline-block"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></svg>`;
     const map = {
       idle:    `<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Process Audio`,
-      loading: `${spinSvg} Processing…`,
+      loading: `${spin} Processing…`,
       done:    `<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Done`,
     };
     processBtn.innerHTML = map[s] || map.idle;
@@ -228,14 +236,9 @@
   minutesInput.addEventListener('input', updateSegBar);
   updateSegBar();
 
-  // ── File handling ──────────────────────────────────────────────────────────
   function handleFile(file) {
-    if (!file || !file.type.startsWith('audio/')) {
-      showStatus('Please upload a valid audio file.', 'error'); return;
-    }
-    state.file = file;
-    state.jobId = null;
-    state.segments = [];
+    if (!file || !file.type.startsWith('audio/')) { showStatus('Please upload a valid audio file.', 'error'); return; }
+    state.file = file; state.jobId = null; state.segments = [];
     fileName.textContent = file.name;
     fileSize.textContent = fmt(file.size);
     fileInfo.classList.add('show');
@@ -244,9 +247,7 @@
     dropTitle.textContent = 'File loaded';
     segmentsList.classList.remove('show');
     segmentsContainer.innerHTML = '';
-    hideStatus();
-    hideProgress();
-    setProcessBtn('idle');
+    hideStatus(); hideProgress(); setProcessBtn('idle');
     downloadBtn.disabled = true;
   }
 
@@ -259,17 +260,12 @@
     if (f) { fileInput.files = e.dataTransfer.files; handleFile(f); }
   });
 
-  // ── Process ────────────────────────────────────────────────────────────────
   processBtn.addEventListener('click', async () => {
     if (!state.file) { showStatus('Please upload an audio file first.', 'error'); return; }
-
-    setProcessBtn('loading');
-    showStatus('Uploading to server…');
-    setProgress(5);
+    setProcessBtn('loading'); showStatus('Uploading to server…'); setProgress(5);
     clearInterval(state.pollTimer);
 
     try {
-      // 1. Upload
       const form = new FormData();
       form.append('audio', state.file);
       const upRes = await fetch(`${API}/upload`, { method: 'POST', body: form });
@@ -278,7 +274,6 @@
       state.jobId = upData.jobId;
       setProgress(15);
 
-      // 2. Start segmentation
       showStatus('Starting segmentation…');
       const segRes = await fetch(`${API}/segment`, {
         method: 'POST',
@@ -286,11 +281,10 @@
         body: JSON.stringify({
           jobId: state.jobId,
           segmentMinutes: parseInt(minutesInput.value) || 5,
+          denoise: denoiseToggle.checked,
         }),
       });
       if (!segRes.ok) throw new Error(`Segment request failed: ${segRes.statusText}`);
-
-      // 3. Poll
       pollStatus();
 
     } catch (err) {
@@ -300,35 +294,24 @@
     }
   });
 
-  // ── Polling with retry ─────────────────────────────────────────────────────
   function pollStatus() {
     clearInterval(state.pollTimer);
     let retryCount = 0;
 
     state.pollTimer = setInterval(async () => {
       try {
-        const res  = await fetch(`${API}/segment/${state.jobId}/status`);
-
-        // If server restarted and returned non-JSON / 5xx, treat as retry
+        const res = await fetch(`${API}/segment/${state.jobId}/status`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
         const data = await res.json();
-        retryCount = 0; // reset on success
+        retryCount = 0;
 
         setProgress(data.progress || 0);
 
         if (data.status === 'processing' || data.status === 'pending') {
-          const labels = {
-            5:  'Resuming after restart…',
-            10: 'Loading audio…',
-            25: 'Reducing noise…',
-            40: 'Splitting segments…',
-            60: 'Filtering segments…',
-            85: 'Building zip…',
-          };
-          const pct     = data.progress || 0;
-          const closest = Object.keys(labels).reverse().find(k => pct >= parseInt(k));
-          showStatus(closest ? labels[closest] : 'Processing…');
+          const labels = { 5:'Resuming after restart…', 10:'Loading audio…', 20:'Preparing audio…', 40:'Splitting segments…', 60:'Filtering & saving…', 85:'Building zip…' };
+          const pct = data.progress || 0;
+          const key = Object.keys(labels).reverse().find(k => pct >= parseInt(k));
+          showStatus(key ? labels[key] : 'Processing…');
 
         } else if (data.status === 'done') {
           clearInterval(state.pollTimer);
@@ -348,20 +331,19 @@
 
       } catch (err) {
         retryCount++;
-        if (retryCount >= 5) {
+        // Free tier restart takes ~30s. Retry for up to 90s (45 × 2s) before giving up.
+        if (retryCount >= 45) {
           clearInterval(state.pollTimer);
           setProcessBtn('idle');
-          showStatus('Lost connection to server. Please try again.', 'error');
+          showStatus('Lost connection. Please refresh and try again.', 'error');
           hideProgress();
         } else {
-          // Keep polling — server is likely mid-restart (takes ~30s on free tier)
-          showStatus(`Server restarting, retrying… (${retryCount}/5)`, 'warning');
+          showStatus(`Server restarting, retrying… (${retryCount}/45)`, 'warning');
         }
       }
-    }, 2000); // poll every 2s
+    }, 2000);
   }
 
-  // ── Render segment list ────────────────────────────────────────────────────
   function renderSegments(segments) {
     segmentsContainer.innerHTML = '';
     segments.forEach(seg => {
@@ -376,7 +358,6 @@
     segmentsList.classList.add('show');
   }
 
-  // ── Download All ───────────────────────────────────────────────────────────
   downloadBtn.addEventListener('click', () => {
     if (!state.jobId || !state.segments.length) return;
     const a = document.createElement('a');
@@ -385,12 +366,9 @@
     a.click();
   });
 
-  // ── Refresh ────────────────────────────────────────────────────────────────
   refreshBtn.addEventListener('click', () => {
     clearInterval(state.pollTimer);
-    if (state.jobId) {
-      fetch(`${API}/segment/${state.jobId}`, { method: 'DELETE' }).catch(() => {});
-    }
+    if (state.jobId) fetch(`${API}/segment/${state.jobId}`, { method: 'DELETE' }).catch(() => {});
     state = { jobId: null, segments: [], pollTimer: null };
     fileInput.value = '';
     fileInfo.classList.remove('show');
@@ -398,11 +376,9 @@
     segmentsList.classList.remove('show');
     segmentsContainer.innerHTML = '';
     waveform.innerHTML = '';
-    hideStatus();
-    hideProgress();
+    hideStatus(); hideProgress();
     dropTitle.textContent = 'Drop audio here';
-    minutesInput.value = 5;
-    updateSegBar();
+    minutesInput.value = 5; updateSegBar();
     setProcessBtn('idle');
     downloadBtn.disabled = true;
   });
